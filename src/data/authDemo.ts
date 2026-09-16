@@ -1,0 +1,93 @@
+import { CorporateTeamMember, UserAccount } from '../types';
+
+export const DEMO_ACCOUNTS: Record<string, { account: UserAccount; passwordHash: string }> = {
+  admin: {
+    account: {
+      id: 'usr_admin',
+      email: 'admin@complisey.local',
+      name: 'CompliSey Administrator',
+      role: 'admin',
+      title: 'Academy System Admin & Faculty Dean',
+      companyName: 'Complisanc Consulting Services (SEY)',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    },
+    passwordHash: 'AcademyAdmin2026!',
+  },
+  corporate: {
+    account: {
+      id: 'usr_corp_demo',
+      email: 'corp@demo.local',
+      name: 'Elena Michel',
+      role: 'corporate',
+      title: 'MLRO & Compliance Director',
+      companyName: 'Demo Corp Ltd',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
+      joinCode: 'DEMO2026',
+    },
+    passwordHash: 'DemoCorp2026!',
+  },
+  learner: {
+    account: {
+      id: 'usr_learner_demo',
+      email: 'm.delpech@demo.local',
+      name: 'Marcus Delpech',
+      role: 'learner',
+      title: 'Compliance Officer · Regulated Entity Staff',
+      companyName: 'Demo Corp Ltd',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+      joinCode: 'DEMO2026',
+    },
+    passwordHash: 'Learner2026!',
+  },
+};
+
+export const INITIAL_CORPORATE_MEMBERS: CorporateTeamMember[] = [
+  {
+    id: 'mem-1',
+    name: 'Marcus Delpech',
+    email: 'm.delpech@demo.local',
+    role: 'Compliance Officer',
+    joinedDate: '2026-09-02',
+    completedCourses: 2,
+    totalCourses: 6,
+    overallScore: 88,
+    lastActive: 'Today',
+    certificatesCount: 2,
+  },
+  {
+    id: 'mem-2',
+    name: 'Sarah Pillay',
+    email: 's.pillay@demo.local',
+    role: 'Senior CDD & Onboarding Analyst',
+    joinedDate: '2026-09-05',
+    completedCourses: 1,
+    totalCourses: 6,
+    overallScore: 92,
+    lastActive: 'Yesterday',
+    certificatesCount: 1,
+  },
+  {
+    id: 'mem-3',
+    name: 'Jean-Luc Renaud',
+    email: 'jl.renaud@demo.local',
+    role: 'Corporate Services Administrator',
+    joinedDate: '2026-09-07',
+    completedCourses: 1,
+    totalCourses: 6,
+    overallScore: 85,
+    lastActive: '3 days ago',
+    certificatesCount: 1,
+  },
+  {
+    id: 'mem-4',
+    name: 'Christian Morel',
+    email: 'c.morel@demo.local',
+    role: 'Junior Compliance Assistant',
+    joinedDate: '2026-09-10',
+    completedCourses: 0,
+    totalCourses: 6,
+    overallScore: 78,
+    lastActive: '5 days ago',
+    certificatesCount: 0,
+  },
+];

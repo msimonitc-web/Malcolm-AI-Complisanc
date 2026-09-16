@@ -1,0 +1,71 @@
+import React from 'react';
+
+interface CompliseyLogoProps {
+  className?: string;
+  size?: number | string;
+  cColor?: string; // Default navy blue #1b365d
+  ankhColor?: string; // Default golden ochre #d9a438
+  showBackground?: boolean;
+}
+
+/**
+ * Official Complisey Logo: Bold circular navy "C" encircling the golden Ankh ("☥").
+ * Replaces generic shield icons across the application.
+ */
+export const CompliseyLogo: React.FC<CompliseyLogoProps> = ({
+  className = 'w-8 h-8',
+  size,
+  cColor = '#1d3c6a',
+  ankhColor = '#d9a438',
+  showBackground = false,
+}) => {
+  const style = size ? { width: size, height: size } : undefined;
+
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`shrink-0 select-none ${className}`}
+      style={style}
+      aria-label="Complisey Logo"
+    >
+      {showBackground && (
+        <circle cx="50" cy="50" r="48" fill="#ffffff" />
+      )}
+
+      {/* Outer Navy "C" Arc */}
+      <path
+        d="M 80.5 28.5 A 37.5 37.5 0 1 0 80.5 71.5"
+        stroke={cColor}
+        strokeWidth="7.2"
+        strokeLinecap="butt"
+      />
+
+      {/* Golden Ankh Element */}
+      {/* Top Loop with teardrop hollow */}
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M 50 23.5 C 43.8 23.5 41.5 28.5 41.5 34.8 C 41.5 40.8 45.2 45.2 47.6 47.5 L 47.6 49.5 L 52.4 49.5 L 52.4 47.5 C 54.8 45.2 58.5 40.8 58.5 34.8 C 58.5 28.5 56.2 23.5 50 23.5 Z M 50 27.6 C 53.6 27.6 54.8 31 54.8 34.8 C 54.8 39.2 52.2 43 50 44.8 C 47.8 43 45.2 39.2 45.2 34.8 C 45.2 31 46.4 27.6 50 27.6 Z"
+        fill={ankhColor}
+      />
+
+      {/* Horizontal Crossbar */}
+      <rect
+        x="37.5"
+        y="49.5"
+        width="25"
+        height="5"
+        rx="0.8"
+        fill={ankhColor}
+      />
+
+      {/* Vertical Lower Stem (subtle flare at base) */}
+      <path
+        d="M 47.4 54.5 L 52.6 54.5 L 53.4 75 L 46.6 75 Z"
+        fill={ankhColor}
+      />
+    </svg>
+  );
+};

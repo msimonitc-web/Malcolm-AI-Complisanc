@@ -1,0 +1,6 @@
+{
+  "name": "CompliSey Academy",
+  "description": "CompliSey Academy provides private AML/CFT staff training, prepaid seat payment gateway checkout, compliance course dashboard, and mobile-responsive student portal for Seychelles regulated reporting entities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
