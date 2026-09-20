@@ -854,7 +854,7 @@ export const ExploreCourses: React.FC = () => {
                             </span>
                             <span className="text-[10px] text-slate-300">·</span>
                             <span className="text-[10px] text-amber-700 font-semibold">
-                              Corp from SCR 600
+                              Corp from SCR 1,650
                             </span>
                           </div>
                         </div>

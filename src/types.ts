@@ -203,6 +203,7 @@ export interface UserAccount {
   joinCode?: string;
   sessionId?: string;
   registeredAt?: string;
+  passwordHash?: string;
 }
 
 export interface StaffAssessmentWeakness {
