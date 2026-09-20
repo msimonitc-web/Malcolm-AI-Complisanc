@@ -1113,7 +1113,7 @@ export const AcademyProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Check configured demo or team accounts
     const match = Object.values(DEMO_ACCOUNTS).find(
-      (entry) => entry.account.email.toLowerCase() === trimmedEmail && (entry.passwordHash === password || password === 'Complisey2026!' || password.length >= 4)
+      (entry) => entry.account.email.toLowerCase() === trimmedEmail && entry.passwordHash === password
     );
     if (match) {
       const sessionAccount: UserAccount = {

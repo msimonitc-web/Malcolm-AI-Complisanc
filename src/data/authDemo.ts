@@ -11,7 +11,7 @@ export const DEMO_ACCOUNTS: Record<string, { account: UserAccount; passwordHash:
       companyName: 'Complisanc Consulting Services (SEY)',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
     },
-    passwordHash: 'Complisey2026!',
+    passwordHash: 'CompliseyMalcolm2026!',
   },
   eric: {
     account: {
@@ -23,20 +23,7 @@ export const DEMO_ACCOUNTS: Record<string, { account: UserAccount; passwordHash:
       companyName: 'Complisanc Consulting Services (SEY)',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
     },
-    passwordHash: 'Complisey2026!',
-  },
-  corporate: {
-    account: {
-      id: 'usr-corp-mlro',
-      email: 'corp@demo.local',
-      name: 'Jean-Luc Confait',
-      role: 'corporate',
-      title: 'Money Laundering Reporting Officer (MLRO)',
-      companyName: 'Victoria Fiduciary Services Ltd',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80',
-      joinCode: 'DEMO2026',
-    },
-    passwordHash: 'DemoCorp2026!',
+    passwordHash: 'CompliseyEric2026!',
   },
   learner: {
     account: {

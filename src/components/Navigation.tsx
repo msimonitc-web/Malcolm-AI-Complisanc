@@ -459,40 +459,25 @@ export const Navigation: React.FC<NavigationProps> = ({
               </button>
             </div>
 
-            {/* Quick Demo Pre-fill for User Portal (Learners and Corporate Accounts Only) */}
+            {/* Quick Demo Pre-fill for User Portal */}
             <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-[#071433]/70 border border-slate-200 dark:border-[#193566]">
               <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Quick-Select User Portal Account:
+                Quick-Select Student Portal Account:
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('learner@demo.local');
-                    setLoginPassword('DemoLearner2026!');
+                    setLoginEmail('learner@complisey.com');
+                    setLoginPassword('Learner2026!');
                   }}
                   className="p-2 text-left rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 text-xs font-bold text-emerald-900 dark:text-emerald-300 transition-colors"
                 >
                   <div className="flex items-center gap-1.5 mb-1">
                     <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span className="font-bold">Registered Learner</span>
+                    <span className="font-bold">Standard Student Learner</span>
                   </div>
-                  <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">Alex Rivera (Compliance Officer)</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginEmail('corp@demo.local');
-                    setLoginPassword('DemoCorp2026!');
-                  }}
-                  className="p-2 text-left rounded-lg border border-blue-200 dark:border-blue-700/50 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-xs font-bold text-blue-900 dark:text-blue-300 transition-colors"
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    <span className="font-bold">Corporate MLRO</span>
-                  </div>
-                  <div className="text-[10px] text-blue-700 dark:text-blue-400 font-normal">Jean-Luc Confait (Victoria Fiduciary)</div>
+                  <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">Standard Course Enrollee</div>
                 </button>
               </div>
             </div>
