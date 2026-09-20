@@ -129,7 +129,7 @@ export const LegalModals: React.FC = () => {
                   <strong className="text-slate-900">Complisanc Consulting Services (SEY) trading as Complisey</strong>, a registered entity in Victoria, Mahé, Republic of Seychelles (hereinafter referred to as &ldquo;Complisey&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;).
                 </p>
                 <p>
-                  For data protection inquiries, audit requests, or supervisory verifications, our designated compliance officer can be reached at <span className="font-mono text-blue-700">privacy@complisey.com</span> or via our registered business presence in Seychelles.
+                  For data protection inquiries, audit requests, administration support, or supervisory verifications, our administration office can be reached at <span className="font-mono text-blue-700">malcolm@complisanc.com</span> or for training matters at <span className="font-mono text-blue-700">eric@complisanc.com</span>.
                 </p>
               </section>
 
@@ -236,14 +236,20 @@ export const LegalModals: React.FC = () => {
                   <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center text-xs font-bold">
                     1
                   </span>
-                  Educational Purpose &amp; Regulatory Disclaimer (Non-Legal Advice)
+                  Educational Training Provider Status &amp; Regulatory Disclaimer
                 </h4>
-                <div className="p-3 bg-red-50/60 border border-red-200 rounded-lg text-red-950">
-                  <p className="font-semibold mb-1">Crucial Regulatory &amp; Legal Notice:</p>
+                <div className="p-3 bg-red-50/60 border border-red-200 rounded-lg text-red-950 space-y-2">
+                  <p className="font-semibold">Independent Training Provider Declaration:</p>
+                  <p className="text-xs leading-relaxed">
+                    Complisanc Consulting Services (SEY) trading as Complisey (<a href="https://complisey.com" target="_blank" rel="noopener noreferrer" className="underline font-bold text-red-900">complisey.com</a>) is an independent compliance training provider. Complisey does not act on behalf of, nor does it represent, any supervisory or law enforcement agency.
+                  </p>
+                  <p className="text-xs leading-relaxed">
+                    Our sole objective is to provide high-quality, practical training to regulated and reporting entities to ensure they are compliant with their statutory obligations and institutional training policies (including Section 34 of the AML/CFT Act 2020).
+                  </p>
                   <p className="text-xs leading-relaxed">
                     Courses, lecture videos, typologies, and assessments provided by Complisey are for <strong>professional educational and continuing professional development (CPD) purposes only</strong>. Completion of any course or receipt of a certificate does <strong>NOT</strong> constitute formal legal advice, nor does it guarantee regulatory approval, immunity from enforcement actions, or exemption from statutory audits by the Financial Services Authority (FSA), Financial Intelligence Unit (FIU), or any international supervisory body.
                   </p>
-                  <p className="text-xs mt-2 leading-relaxed">
+                  <p className="text-xs leading-relaxed">
                     Each reporting entity remains exclusively responsible for formulating, implementing, and enforcing its own internal compliance manuals, risk assessments, customer due diligence (CDD) procedures, and suspicious transaction reporting (STR) frameworks.
                   </p>
                 </div>

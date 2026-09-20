@@ -1,0 +1,377 @@
+{
+  "entities": {
+    "studentProgress": {
+      "title": "StudentProgress",
+      "description": "Real-time course completion and quiz module progress synchronized across devices",
+      "type": "object",
+      "properties": {
+        "studentId": {
+          "type": "string",
+          "description": "Identifier of the student"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Name of the student"
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Course identifier"
+        },
+        "courseTitle": {
+          "type": "string",
+          "description": "Course title"
+        },
+        "completionPercentage": {
+          "type": "number",
+          "description": "Calculated course completion percentage 0 to 100"
+        },
+        "completedLessonIds": {
+          "type": "array",
+          "description": "List of finished lesson identifiers"
+        },
+        "quizScores": {
+          "type": "object",
+          "description": "Scores recorded for each quiz module"
+        },
+        "lastQuizLessonId": {
+          "type": "string",
+          "description": "Identifier of the most recent completed quiz module"
+        },
+        "lastQuizScore": {
+          "type": "number",
+          "description": "Score of the most recent quiz module (0-100)"
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "description": "Whether the course is 100% completed"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last synchronization"
+        }
+      },
+      "required": [
+        "studentId",
+        "courseId",
+        "completionPercentage",
+        "completedLessonIds",
+        "updatedAt"
+      ]
+    },
+    "adminNotification": {
+      "title": "AdminNotification",
+      "description": "Automated email notification triggered when a student requests a proforma invoice",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique notification identifier"
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Associated enrollment order ID"
+        },
+        "proformaNumber": {
+          "type": "string",
+          "description": "Proforma invoice number"
+        },
+        "ccsBookingId": {
+          "type": "string",
+          "description": "Complisey booking and bank reference ID"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Name of the student or compliance officer"
+        },
+        "studentEmail": {
+          "type": "string",
+          "description": "Email address of the student"
+        },
+        "studentPhone": {
+          "type": "string",
+          "description": "Phone number of the student"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Company or reporting entity name"
+        },
+        "companyAddress": {
+          "type": "string",
+          "description": "Company physical or registered address"
+        },
+        "coursePackageTitle": {
+          "type": "string",
+          "description": "Selected course package or catalogue access"
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Identifier of the selected course"
+        },
+        "seatCount": {
+          "type": "number",
+          "description": "Number of prepaid seats requested"
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Unit price per seat in SCR"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total payable amount in SCR"
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency code (SCR)"
+        },
+        "recipientEmails": {
+          "type": "array",
+          "description": "Admin email recipients who received the automated alert"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Email notification subject line"
+        },
+        "htmlContent": {
+          "type": "string",
+          "description": "Rendered HTML content of the notification"
+        },
+        "textContent": {
+          "type": "string",
+          "description": "Plaintext version of the notification"
+        },
+        "status": {
+          "type": "string",
+          "description": "Dispatch status (sent, delivered)"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional order notes from the student"
+        },
+        "sentAt": {
+          "type": "string",
+          "description": "ISO timestamp of automated dispatch"
+        }
+      },
+      "required": [
+        "id",
+        "orderId",
+        "proformaNumber",
+        "studentName",
+        "studentEmail",
+        "coursePackageTitle",
+        "seatCount",
+        "totalAmount",
+        "sentAt"
+      ]
+    },
+    "courseFeedback": {
+      "title": "CourseFeedback",
+      "description": "Qualitative feedback submitted by students regarding course clarity and material relevance upon completion",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique feedback submission identifier"
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Identifier of the completed course"
+        },
+        "courseTitle": {
+          "type": "string",
+          "description": "Title of the completed course"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Identifier of the submitting student"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Name of the student"
+        },
+        "studentEmail": {
+          "type": "string",
+          "description": "Email of the student"
+        },
+        "clarityRating": {
+          "type": "number",
+          "description": "Clarity of the course from 1 to 5 stars"
+        },
+        "relevanceRating": {
+          "type": "number",
+          "description": "Material relevance from 1 to 5 stars"
+        },
+        "paceRating": {
+          "type": "string",
+          "description": "Training pace (slow, just_right, fast)"
+        },
+        "qualitativeFeedback": {
+          "type": "string",
+          "description": "Freeform notes on most valuable parts or improvements"
+        },
+        "futureSuggestions": {
+          "type": "string",
+          "description": "Suggestions for future training topics"
+        },
+        "submittedAt": {
+          "type": "string",
+          "description": "ISO timestamp of submission"
+        }
+      },
+      "required": [
+        "id",
+        "courseId",
+        "studentId",
+        "clarityRating",
+        "relevanceRating",
+        "paceRating",
+        "submittedAt"
+      ]
+    },
+    "integrityViolation": {
+      "title": "IntegrityViolation",
+      "description": "Proctoring flags and exam integrity violations recorded when a student switches tabs, blurs focus, or exits fullscreen during mandatory competency assessments",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the logged violation"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Identifier of the student committing the violation"
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Name of the student committing the violation"
+        },
+        "studentEmail": {
+          "type": "string",
+          "description": "Email of the student committing the violation"
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Course identifier"
+        },
+        "courseTitle": {
+          "type": "string",
+          "description": "Course title"
+        },
+        "lessonId": {
+          "type": "string",
+          "description": "Lesson identifier"
+        },
+        "lessonTitle": {
+          "type": "string",
+          "description": "Lesson title"
+        },
+        "violationType": {
+          "type": "string",
+          "description": "Type of violation (tab_switch, window_blur, fullscreen_exit)"
+        },
+        "violationTitle": {
+          "type": "string",
+          "description": "Summary of the violation"
+        },
+        "violationDetail": {
+          "type": "string",
+          "description": "Detailed description of the event"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of the violation"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "courseId",
+        "violationType",
+        "timestamp"
+      ]
+    },
+    "systemAuditLog": {
+      "title": "SystemAuditLog",
+      "description": "Comprehensive system and administrative event log for operational troubleshooting, auditability, and Section 34 compliance verification",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique event log identifier"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of the event"
+        },
+        "category": {
+          "type": "string",
+          "description": "Event category (AUTH, ORDERS, BILLING, TOKENS, EXAMS, SECURITY, SYSTEM)"
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity level (INFO, WARNING, ERROR, CRITICAL)"
+        },
+        "action": {
+          "type": "string",
+          "description": "Specific action name"
+        },
+        "actor": {
+          "type": "string",
+          "description": "User email, student ID, admin name, or SYSTEM"
+        },
+        "actorRole": {
+          "type": "string",
+          "description": "Role of the actor (student, admin, corporate_manager, system)"
+        },
+        "details": {
+          "type": "string",
+          "description": "Human-readable description of the event"
+        },
+        "metadata": {
+          "type": "string",
+          "description": "JSON serialized string of contextual metadata and payload"
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "Client IP or network origin tag"
+        },
+        "userAgent": {
+          "type": "string",
+          "description": "Client browser or device user agent"
+        }
+      },
+      "required": [
+        "id",
+        "timestamp",
+        "category",
+        "severity",
+        "action",
+        "actor",
+        "details"
+      ]
+    }
+  },
+  "firestore": {
+    "/student_progress/{progressId}": {
+      "schema": "studentProgress",
+      "description": "Real-time persistent student course completion and quiz module progress collection"
+    },
+    "/admin_notifications/{notificationId}": {
+      "schema": "adminNotification",
+      "description": "Persistent audit log of automated admin email notifications triggered by proforma invoice requests"
+    },
+    "/course_feedback/{feedbackId}": {
+      "schema": "courseFeedback",
+      "description": "Qualitative insights and course assessments submitted by course completers"
+    },
+    "/integrity_violations/{violationId}": {
+      "schema": "integrityViolation",
+      "description": "Persistent audit logs of academic integrity and proctoring violations during final examinations"
+    },
+    "/system_audit_logs/{logId}": {
+      "schema": "systemAuditLog",
+      "description": "Persistent operational system audit log for troubleshooting events, security anomalies, and administrative actions"
+    }
+  }
+}

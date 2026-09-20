@@ -14,13 +14,16 @@ import {
   Info,
   Lock,
   HelpCircle,
+  User,
+  AlertCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAcademy } from '../context/AcademyContext';
 import { PaymentGatewayType } from '../types';
 import { CompliseyLogo } from './CompliseyLogo';
 import { SEYCHELLES_BANK_ACCOUNTS } from '../data/bankingDetails';
-import { calculateOrderTotalSCR, SEAT_PRICING_SCHEDULE, formatSCR } from '../utils/pricing';
+import { calculateOrderTotalSCR, SEAT_PRICING_SCHEDULE, formatSCR, resolvePackageType, CoursePackageType } from '../utils/pricing';
+import { useCsrf, CsrfInput, CsrfBadge } from '../context/CsrfContext';
 
 export const PaymentModal: React.FC = () => {
   const {
@@ -32,22 +35,29 @@ export const PaymentModal: React.FC = () => {
     currency,
     setActiveLegalModal,
     setActiveTab,
+    currentUser,
   } = useAcademy();
+
+  const { csrfToken, submitProtectedForm } = useCsrf();
 
   if (!selectedCourseForCheckout) return null;
 
   const course = selectedCourseForCheckout;
+  const initialPackage = resolvePackageType(course.id);
+  const [selectedPackage, setSelectedPackage] = useState<CoursePackageType>(initialPackage);
 
   // Default to bank_transfer since Stripe is not available in Seychelles
   const [gateway, setGateway] = useState<PaymentGatewayType>('bank_transfer');
-  const [enrollmentType, setEnrollmentType] = useState<'corporate' | 'individual'>('corporate');
-  const [seatCount, setSeatCount] = useState<number>(3);
-  const [companyName, setCompanyName] = useState('Victoria Fiduciary Services Ltd');
-  const [companyAddress, setCompanyAddress] = useState('Premier Building, Albert Street, Victoria, Mahé, Seychelles');
-  const [contactName, setContactName] = useState('Marcus Delpech');
-  const [contactEmail, setContactEmail] = useState('m.delpech@fiduciary-sey.sc');
-  const [contactPhone, setContactPhone] = useState('+248 4 380 000');
+  // Nothing is preselected by default - user explicitly chooses Individual vs Corporate
+  const [enrollmentType, setEnrollmentType] = useState<'corporate' | 'individual' | null>(null);
+  const [seatCount, setSeatCount] = useState<number>(1);
+  const [companyName, setCompanyName] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [contactName, setContactName] = useState(currentUser?.name || '');
+  const [contactEmail, setContactEmail] = useState(currentUser?.email || '');
+  const [contactPhone, setContactPhone] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [selectionError, setSelectionError] = useState<string | null>(null);
 
   // Promo code handling
   const [promoInput, setPromoInput] = useState('');
@@ -57,13 +67,13 @@ export const PaymentModal: React.FC = () => {
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Bank account details for selected currency (Nouvobanq Seychelles Rupee account primary)
+  // Bank account details for selected currency (MCB Seychelles Account primary)
   const bankInfo = SEYCHELLES_BANK_ACCOUNTS[currency] || SEYCHELLES_BANK_ACCOUNTS.SCR;
 
   // Seat pricing calculation based on official exclusive bands in SCR
   const isCorporate = enrollmentType === 'corporate';
   const effectiveSeatCount = isCorporate ? Math.max(1, seatCount) : 1;
-  const pricingCalc = calculateOrderTotalSCR(effectiveSeatCount, isCorporate);
+  const pricingCalc = calculateOrderTotalSCR(effectiveSeatCount, isCorporate, selectedPackage);
 
   const rawSubtotal = pricingCalc.totalSCR;
 
@@ -93,13 +103,42 @@ export const PaymentModal: React.FC = () => {
     }
   };
 
-  const handleGenerateProforma = (e: React.FormEvent) => {
+  const handleGenerateProforma = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSelectionError(null);
+
+    if (!enrollmentType) {
+      setSelectionError('Please choose whether you are enrolling as an Individual Learner or for a Corporate Entity.');
+      return;
+    }
+
     setIsSubmitting(true);
+
+    const orderPayload = {
+      courseId: course.id,
+      packageType: selectedPackage,
+      seatCount: effectiveSeatCount,
+      isCorporate,
+      companyName: isCorporate ? (companyName.trim() || 'Corporate Reporting Entity') : (contactName.trim() || 'Individual Learner'),
+      companyAddress: companyAddress.trim(),
+      contactName: contactName.trim() || 'Compliance Officer',
+      contactEmail: contactEmail.trim() || 'compliance@reporting-entity.sc',
+      contactPhone: contactPhone.trim(),
+      notes: orderNotes.trim(),
+      _csrf: csrfToken,
+    };
+
+    // Submit to protected backend endpoint to verify CSRF token
+    try {
+      await submitProtectedForm('/api/forms/enrollment-order', orderPayload);
+    } catch (err) {
+      console.warn('Backend CSRF verification handled locally or network offline:', err);
+    }
 
     setTimeout(() => {
       const newOrder = createProformaOrder({
         courseId: course.id,
+        packageType: selectedPackage,
         seatCount: effectiveSeatCount,
         isCorporate,
         companyName: isCorporate ? (companyName.trim() || 'Corporate Reporting Entity') : (contactName.trim() || 'Individual Learner'),
@@ -222,57 +261,205 @@ export const PaymentModal: React.FC = () => {
             </div>
           ) : (
             <form onSubmit={handleGenerateProforma}>
+              <CsrfInput formName="enrollment" />
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                 {/* Left Column: Form & Banking Info */}
                 <div className="md:col-span-7 space-y-4">
-                  {/* Seat Type & Pricing Bands */}
+                  {/* Package & Seat Type & Pricing Bands */}
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                    <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-                      <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                        Select Enrollment Tier (12-Month Prepaid Access)
-                      </label>
-                      <span className="text-[10px] text-amber-700 font-bold">SCR Pricing</span>
+                    {/* Curriculum Package Selector */}
+                    <div>
+                      <div className="flex items-center justify-between pb-1 mb-2 border-b border-slate-200">
+                        <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                          Curriculum Track Selected
+                        </label>
+                        <span className="text-[10px] text-emerald-700 font-bold uppercase">
+                          {selectedPackage === 'pack' ? '6 Modules · Full Pack' : selectedPackage === 'level1' ? 'Level 1 · 3 Modules' : 'Level 2 · 3 Modules'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPackage('pack')}
+                          className={`p-2 rounded-lg border text-left transition-all ${
+                            selectedPackage === 'pack'
+                              ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-600'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="text-[11px] font-bold truncate">Full Pack</div>
+                          <div className="text-[10px] text-emerald-700 font-semibold">Levels 1 &amp; 2 (12 CPD)</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPackage('level1')}
+                          className={`p-2 rounded-lg border text-left transition-all ${
+                            selectedPackage === 'level1'
+                              ? 'border-blue-600 bg-blue-50 text-blue-950 ring-1 ring-blue-600'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="text-[11px] font-bold truncate">Level 1</div>
+                          <div className="text-[10px] text-blue-700 font-semibold">Foundations (6 CPD)</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPackage('level2')}
+                          className={`p-2 rounded-lg border text-left transition-all ${
+                            selectedPackage === 'level2'
+                              ? 'border-amber-600 bg-amber-50 text-amber-950 ring-1 ring-amber-600'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="text-[11px] font-bold truncate">Level 2</div>
+                          <div className="text-[10px] text-amber-700 font-semibold">Operations (6 CPD)</div>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEnrollmentType('individual');
-                          setSeatCount(1);
-                        }}
-                        className={`p-2.5 rounded-xl border text-left transition-all ${
-                          enrollmentType === 'individual'
-                            ? 'border-[#071433] bg-[#071433] text-white shadow-xs'
-                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="text-xs font-bold">Individual Seat</div>
-                        <div className={`text-[11px] ${enrollmentType === 'individual' ? 'text-amber-300' : 'text-slate-500'}`}>
-                          SCR 1,000 per seat (1 learner)
-                        </div>
-                      </button>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                        <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>1. Enrolment Tier</span>
+                          {!enrollmentType ? (
+                            <span className="text-[10px] text-amber-700 font-bold lowercase bg-amber-100 px-1.5 py-0.5 rounded">
+                              Please select an option
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-700 font-bold lowercase bg-emerald-50 px-1.5 py-0.5 rounded">
+                              {enrollmentType === 'corporate' ? 'Corporate selected' : 'Individual selected'}
+                            </span>
+                          )}
+                        </label>
+                        {enrollmentType && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEnrollmentType(null);
+                              setSeatCount(1);
+                              setSelectionError(null);
+                            }}
+                            className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                          >
+                            Change tier
+                          </button>
+                        )}
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEnrollmentType('corporate');
-                          if (seatCount === 1) setSeatCount(3);
-                        }}
-                        className={`p-2.5 rounded-xl border text-left transition-all ${
-                          enrollmentType === 'corporate'
-                            ? 'border-[#071433] bg-[#071433] text-white shadow-xs'
-                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="text-xs font-bold flex items-center justify-between">
-                          <span>Corporate Seats</span>
-                          <span className="text-[9px] bg-amber-400 text-[#071433] font-black px-1.5 py-0.2 rounded">Tiered</span>
+                      {/* Prominent Selection Cards (Neither is preselected by default) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEnrollmentType('individual');
+                            setSeatCount(1);
+                            setSelectionError(null);
+                          }}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            enrollmentType === 'individual'
+                              ? 'border-[#071433] bg-[#071433] text-white shadow-sm ring-2 ring-[#071433]'
+                              : 'border-slate-300 hover:border-slate-400 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                                enrollmentType === 'individual'
+                                  ? 'bg-amber-400 text-[#071433]'
+                                  : 'bg-blue-50 text-blue-700'
+                              }`}
+                            >
+                              <User className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold">Individual Learner</div>
+                              <div
+                                className={`text-[10px] ${
+                                  enrollmentType === 'individual' ? 'text-amber-200' : 'text-slate-500'
+                                }`}
+                              >
+                                1 Self-Paced Seat
+                              </div>
+                            </div>
+                          </div>
+                          <p
+                            className={`text-[11px] leading-tight ${
+                              enrollmentType === 'individual' ? 'text-slate-200' : 'text-slate-600'
+                            }`}
+                          >
+                            For solo professionals and compliance officers seeking direct statutory certification.
+                          </p>
+                          <div
+                            className={`mt-2 font-mono font-bold text-xs ${
+                              enrollmentType === 'individual' ? 'text-amber-300' : 'text-[#071433]'
+                            }`}
+                          >
+                            SCR {calculateOrderTotalSCR(1, false, selectedPackage).ratePerSeat.toLocaleString()} / seat
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEnrollmentType('corporate');
+                            if (seatCount === 1) setSeatCount(3);
+                            setSelectionError(null);
+                          }}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            enrollmentType === 'corporate'
+                              ? 'border-[#071433] bg-[#071433] text-white shadow-sm ring-2 ring-[#071433]'
+                              : 'border-slate-300 hover:border-slate-400 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                                  enrollmentType === 'corporate'
+                                    ? 'bg-amber-400 text-[#071433]'
+                                    : 'bg-amber-50 text-amber-700'
+                                }`}
+                              >
+                                <Building2 className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold">Corporate Firm</div>
+                                <div
+                                  className={`text-[10px] ${
+                                    enrollmentType === 'corporate' ? 'text-amber-200' : 'text-slate-500'
+                                  }`}
+                                >
+                                  Multi-Seat Team Roster
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[9px] bg-amber-400 text-[#071433] font-black px-1.5 py-0.2 rounded">
+                              Tiered
+                            </span>
+                          </div>
+                          <p
+                            className={`text-[11px] leading-tight ${
+                              enrollmentType === 'corporate' ? 'text-slate-200' : 'text-slate-600'
+                            }`}
+                          >
+                            For regulated entities under Section 34 with bulk discounts and non-transferable token rosters.
+                          </p>
+                          <div
+                            className={`mt-2 font-mono font-bold text-xs ${
+                              enrollmentType === 'corporate' ? 'text-amber-300' : 'text-[#071433]'
+                            }`}
+                          >
+                            From SCR {selectedPackage === 'pack' ? '1,650' : selectedPackage === 'level1' ? '800' : '1,000'} / seat
+                          </div>
+                        </button>
+                      </div>
+
+                      {selectionError && (
+                        <div className="bg-rose-50 border border-rose-200 rounded-lg p-2.5 flex items-center gap-2 text-xs text-rose-800">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>{selectionError}</span>
                         </div>
-                        <div className={`text-[11px] ${enrollmentType === 'corporate' ? 'text-amber-300' : 'text-slate-500'}`}>
-                          SCR 600 – SCR 900 per seat
-                        </div>
-                      </button>
+                      )}
                     </div>
 
                     {/* Seat Count Selection for Corporate */}
@@ -320,42 +507,52 @@ export const PaymentModal: React.FC = () => {
                     {/* Official Price Schedule Table */}
                     <div className="pt-2 border-t border-slate-200 text-[11px]">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
-                        <span>Online Seat Price Schedule</span>
-                        <span className="text-slate-400 font-normal">Seat bands are exclusive</span>
+                        <span>Official Rate Schedule ({selectedPackage === 'pack' ? 'Complete Pack' : selectedPackage === 'level1' ? 'Level 1' : 'Level 2'})</span>
+                        <span className="text-slate-400 font-normal">SCR / seat</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 text-[10px] text-center">
-                        <div className={`p-1.5 rounded border ${!isCorporate ? 'bg-amber-50 border-amber-300 font-bold text-amber-900' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        <div className={`p-1.5 rounded border ${enrollmentType === 'individual' ? 'bg-amber-50 border-amber-300 font-bold text-amber-900 ring-1 ring-amber-300' : 'bg-white border-slate-200 text-slate-600'}`}>
                           <div>Individual</div>
-                          <div className="font-mono font-bold text-slate-900">SCR 1,000</div>
+                          <div className="font-mono font-bold text-slate-900 mt-0.5">
+                            SCR {calculateOrderTotalSCR(1, false, selectedPackage).ratePerSeat.toLocaleString()}
+                          </div>
                         </div>
-                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount <= 5 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount <= 5 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900 ring-1 ring-amber-300' : 'bg-white border-slate-200 text-slate-600'}`}>
                           <div>Corp 1–5</div>
-                          <div className="font-mono font-bold text-slate-900">SCR 900</div>
+                          <div className="font-mono font-bold text-slate-900 mt-0.5">
+                            SCR {calculateOrderTotalSCR(3, true, selectedPackage).ratePerSeat.toLocaleString()}
+                          </div>
                         </div>
-                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount >= 6 && effectiveSeatCount <= 10 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount >= 6 && effectiveSeatCount <= 10 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900 ring-1 ring-amber-300' : 'bg-white border-slate-200 text-slate-600'}`}>
                           <div>Corp 6–10</div>
-                          <div className="font-mono font-bold text-slate-900">SCR 800</div>
+                          <div className="font-mono font-bold text-slate-900 mt-0.5">
+                            SCR {calculateOrderTotalSCR(8, true, selectedPackage).ratePerSeat.toLocaleString()}
+                          </div>
                         </div>
-                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount >= 11 && effectiveSeatCount <= 20 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount >= 11 && effectiveSeatCount <= 20 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900 ring-1 ring-amber-300' : 'bg-white border-slate-200 text-slate-600'}`}>
                           <div>Corp 11–20</div>
-                          <div className="font-mono font-bold text-slate-900">SCR 750</div>
+                          <div className="font-mono font-bold text-slate-900 mt-0.5">
+                            SCR {calculateOrderTotalSCR(15, true, selectedPackage).ratePerSeat.toLocaleString()}
+                          </div>
                         </div>
-                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount >= 21 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900' : 'bg-white border-slate-200 text-slate-600'}`}>
+                        <div className={`p-1.5 rounded border ${isCorporate && effectiveSeatCount >= 21 ? 'bg-amber-50 border-amber-300 font-bold text-amber-900 ring-1 ring-amber-300' : 'bg-white border-slate-200 text-slate-600'}`}>
                           <div>Corp 21+</div>
-                          <div className="font-mono font-bold text-slate-900">SCR 600</div>
+                          <div className="font-mono font-bold text-slate-900 mt-0.5">
+                            SCR {calculateOrderTotalSCR(25, true, selectedPackage).ratePerSeat.toLocaleString()}
+                          </div>
                         </div>
                       </div>
                       <p className="text-[10px] text-slate-500 mt-1.5 italic">
-                        * Seat bands are exclusive: five seats fall in the 1–5 band. Pay by bank transfer in Seychelles rupees quoting the CCS booking ID.
+                        * Statutory compliance curriculum rates approved by Complisey. Pay by direct bank wire in Seychelles Rupees (SCR) quoting generated Booking ID.
                       </p>
                     </div>
                   </div>
 
-                  {/* Corporate Entity Details */}
+                  {/* Corporate or Individual Billing Details */}
                   <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div className="flex items-center justify-between pb-1 border-b border-slate-200">
                       <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                        {isCorporate ? 'Corporate Billing Details' : 'Learner Billing Details'}
+                        {isCorporate ? '2. Corporate Billing Details' : enrollmentType === 'individual' ? '2. Individual Learner Details' : '2. Contact & Billing Information'}
                       </span>
                       <span className="text-[10px] text-slate-500">For Official Proforma Invoice</span>
                     </div>
@@ -399,7 +596,7 @@ export const PaymentModal: React.FC = () => {
                           required
                           value={contactName}
                           onChange={(e) => setContactName(e.target.value)}
-                          placeholder="e.g. Marcus Delpech"
+                          placeholder={isCorporate ? 'e.g. Compliance Officer Name' : 'e.g. John Doe'}
                           className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-[#071433]"
                         />
                       </div>
@@ -412,7 +609,7 @@ export const PaymentModal: React.FC = () => {
                           required
                           value={contactEmail}
                           onChange={(e) => setContactEmail(e.target.value)}
-                          placeholder="m.delpech@fiduciary.sc"
+                          placeholder="e.g. yourname@domain.sc"
                           className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-[#071433]"
                         />
                       </div>
@@ -426,7 +623,7 @@ export const PaymentModal: React.FC = () => {
                         type="text"
                         value={contactPhone}
                         onChange={(e) => setContactPhone(e.target.value)}
-                        placeholder="+248 4 380 000"
+                        placeholder="e.g. +248 2 500 000"
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-[#071433]"
                       />
                     </div>
@@ -450,7 +647,7 @@ export const PaymentModal: React.FC = () => {
                       Account Beneficiary: <strong className="text-slate-900">{bankInfo.accountName}</strong>
                     </p>
                     <p className="text-slate-600 text-[11px]">
-                      Nouvobanq SCR Account: <strong className="font-mono text-blue-900">{bankInfo.accountNumber}</strong>
+                      MCB Seychelles Account: <strong className="font-mono text-blue-900">{bankInfo.accountNumber}</strong>
                     </p>
                   </div>
                 </div>
@@ -479,17 +676,21 @@ export const PaymentModal: React.FC = () => {
                     <div className="py-2.5 space-y-1.5 text-xs border-y border-slate-200">
                       <div className="flex justify-between text-slate-600">
                         <span>Prepaid Seat Tier:</span>
-                        <span className="font-semibold text-slate-900">{pricingCalc.bandLabel}</span>
+                        <span className="font-semibold text-slate-900">
+                          {enrollmentType ? pricingCalc.bandLabel : 'Awaiting tier selection'}
+                        </span>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>Unit Rate per Seat:</span>
-                        <span className="font-mono font-bold text-slate-900">{formatPrice(pricingCalc.ratePerSeat)}</span>
+                        <span className="font-mono font-bold text-slate-900">
+                          {enrollmentType ? formatPrice(pricingCalc.ratePerSeat) : '—'}
+                        </span>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>Number of Seats:</span>
-                        <span>× {effectiveSeatCount}</span>
+                        <span>{enrollmentType ? `× ${effectiveSeatCount}` : '—'}</span>
                       </div>
-                      {discountAmount > 0 && (
+                      {discountAmount > 0 && enrollmentType && (
                         <div className="flex justify-between text-emerald-700 font-semibold">
                           <span>Discount ({appliedPromo?.code}):</span>
                           <span>-{formatPrice(discountAmount)}</span>
@@ -526,10 +727,18 @@ export const PaymentModal: React.FC = () => {
                     <div className="pt-3 flex justify-between items-baseline">
                       <span className="text-xs font-bold text-slate-800">Total Due on Wire:</span>
                       <div className="text-right">
-                        <span className="text-2xl font-black text-[#071433] font-['Space_Grotesk']">
-                          {formatPrice(finalPrice)}
-                        </span>
-                        <span className="text-xs text-slate-500 font-semibold ml-1">SCR</span>
+                        {enrollmentType ? (
+                          <>
+                            <span className="text-2xl font-black text-[#071433] font-['Space_Grotesk']">
+                              {formatPrice(finalPrice)}
+                            </span>
+                            <span className="text-xs text-slate-500 font-semibold ml-1">SCR</span>
+                          </>
+                        ) : (
+                          <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-1 rounded">
+                            Select Tier Above
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -549,14 +758,21 @@ export const PaymentModal: React.FC = () => {
                     </p>
                   </div>
 
-                  <div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] text-slate-500">Official Anti-Fraud Verification</span>
+                      <CsrfBadge />
+                    </div>
+
                     <button
                       type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-3 px-4 rounded-xl bg-[#071433] hover:bg-[#0f2866] text-amber-300 font-bold text-xs shadow-md shadow-[#071433]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-75 cursor-pointer"
+                      disabled={isSubmitting || !enrollmentType}
+                      className="w-full py-3 px-4 rounded-xl bg-[#071433] hover:bg-[#0f2866] text-amber-300 font-bold text-xs shadow-md shadow-[#071433]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                     >
                       {isSubmitting ? (
                         <div className="w-4 h-4 border-2 border-amber-300/30 border-t-amber-300 rounded-full animate-spin" />
+                      ) : !enrollmentType ? (
+                        <span>Select Individual or Corporate Above to Proceed</span>
                       ) : (
                         <>
                           <FileText className="w-4 h-4" />

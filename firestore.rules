@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidProgress(data) {
+      return data.keys().hasAll(['studentId', 'courseId', 'completionPercentage', 'completedLessonIds', 'updatedAt']) &&
+        data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+        data.courseId is string && data.courseId.size() > 0 && data.courseId.size() <= 128 &&
+        data.completionPercentage is number && data.completionPercentage >= 0 && data.completionPercentage <= 100 &&
+        data.completedLessonIds is list && data.completedLessonIds.size() <= 150 &&
+        data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    function isValidAdminNotification(data) {
+      return data.keys().hasAll(['id', 'orderId', 'proformaNumber', 'studentName', 'studentEmail', 'coursePackageTitle', 'seatCount', 'totalAmount', 'sentAt']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.orderId is string && data.orderId.size() > 0 && data.orderId.size() <= 128 &&
+        data.proformaNumber is string && data.proformaNumber.size() > 0 && data.proformaNumber.size() <= 64 &&
+        data.studentName is string && data.studentName.size() > 0 && data.studentName.size() <= 128 &&
+        data.studentEmail is string && data.studentEmail.size() > 0 && data.studentEmail.size() <= 128 &&
+        data.coursePackageTitle is string && data.coursePackageTitle.size() > 0 && data.coursePackageTitle.size() <= 256 &&
+        data.seatCount is number && data.seatCount >= 1 &&
+        data.totalAmount is number && data.totalAmount >= 0 &&
+        data.sentAt is string && data.sentAt.size() <= 64;
+    }
+
+    function isValidCourseFeedback(data) {
+      return data.keys().hasAll(['id', 'courseId', 'studentId', 'clarityRating', 'relevanceRating', 'paceRating', 'submittedAt']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.courseId is string && data.courseId.size() > 0 && data.courseId.size() <= 128 &&
+        data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+        data.clarityRating is number && data.clarityRating >= 1 && data.clarityRating <= 5 &&
+        data.relevanceRating is number && data.relevanceRating >= 1 && data.relevanceRating <= 5 &&
+        data.paceRating is string && data.paceRating.size() > 0 && data.paceRating.size() <= 32 &&
+        data.submittedAt is string && data.submittedAt.size() <= 64;
+    }
+
+    function isValidIntegrityViolation(data) {
+      return data.keys().hasAll(['id', 'studentId', 'studentName', 'courseId', 'violationType', 'timestamp']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+        data.studentName is string && data.studentName.size() > 0 && data.studentName.size() <= 128 &&
+        data.courseId is string && data.courseId.size() > 0 && data.courseId.size() <= 128 &&
+        data.violationType is string && data.violationType.size() > 0 && data.violationType.size() <= 64 &&
+        data.timestamp is string && data.timestamp.size() <= 64;
+    }
+
+    function isValidSystemAuditLog(data) {
+      return data.keys().hasAll(['id', 'timestamp', 'category', 'severity', 'action', 'actor', 'details']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() <= 64 &&
+        data.category is string && data.category.size() > 0 && data.category.size() <= 32 &&
+        data.severity is string && data.severity.size() > 0 && data.severity.size() <= 32 &&
+        data.action is string && data.action.size() > 0 && data.action.size() <= 64 &&
+        data.actor is string && data.actor.size() > 0 && data.actor.size() <= 128 &&
+        data.details is string && data.details.size() > 0 && data.details.size() <= 1024;
+    }
+
+    match /student_progress/{progressId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(progressId) && isValidProgress(incoming());
+      allow delete: if false;
+    }
+
+    match /admin_notifications/{notificationId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(notificationId) && isValidAdminNotification(incoming());
+      allow delete: if false;
+    }
+
+    match /course_feedback/{feedbackId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(feedbackId) && isValidCourseFeedback(incoming());
+      allow delete: if false;
+    }
+
+    match /integrity_violations/{violationId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(violationId) && isValidIntegrityViolation(incoming());
+      allow delete: if false;
+    }
+
+    match /system_audit_logs/{logId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(logId) && isValidSystemAuditLog(incoming());
+      allow delete: if false;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

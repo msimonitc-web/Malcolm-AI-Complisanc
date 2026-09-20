@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, CheckCircle2, Download, ExternalLink, ShieldCheck, Sparkles, BookOpen, FileCheck } from 'lucide-react';
+import { Award, CheckCircle2, Download, ExternalLink, ShieldCheck, Sparkles, BookOpen, FileCheck, AlertTriangle, Clock, Lock } from 'lucide-react';
 import { useAcademy } from '../context/AcademyContext';
 
 export const CertificatesView: React.FC = () => {
@@ -11,12 +11,19 @@ export const CertificatesView: React.FC = () => {
     isCourseCompleted,
     claimCertificate,
     setActiveTab,
+    getCertificateExpiryStatuses,
+    student,
+    currentUser,
   } = useAcademy();
 
   // Find any completed courses that don't have their certificate claimed yet
   const unclimedCompletedCourses = courses.filter((c) => {
     return isCourseCompleted(c.id) && !certificates.some((cert) => cert.courseId === c.id);
   });
+
+  const expiryStatuses = getCertificateExpiryStatuses();
+
+  const isCorporateLearner = !!student.companyName && currentUser?.role !== 'corporate';
 
   return (
     <div className="space-y-6 pb-12">
@@ -66,65 +73,127 @@ export const CertificatesView: React.FC = () => {
       )}
 
       {/* Certificates Grid */}
-      {certificates.length > 0 ? (
+      {expiryStatuses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {certificates.map((cert) => (
-            <div
-              key={cert.id}
-              className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-[#071433] flex items-center justify-center shadow-md shadow-amber-500/20">
-                    <Award className="w-6 h-6" />
+          {expiryStatuses.map((st) => {
+            const cert = st.certificate;
+            return (
+              <div
+                key={cert.id}
+                className={`bg-white rounded-2xl border p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4 ${
+                  st.isExpired
+                    ? 'border-rose-200 bg-rose-50/10'
+                    : st.isNearExpiry
+                    ? 'border-amber-200 bg-amber-50/10'
+                    : 'border-slate-200'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md ${
+                      st.isExpired
+                        ? 'bg-rose-500 text-white shadow-rose-500/10'
+                        : st.isNearExpiry
+                        ? 'bg-amber-500 text-[#071433] shadow-amber-500/10'
+                        : 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-[#071433] shadow-amber-500/20'
+                    }`}>
+                      <Award className="w-6 h-6" />
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                        {cert.id}
+                      </span>
+                      {st.isExpired && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full animate-pulse">
+                          <AlertTriangle className="w-3 h-3" />
+                          EXPIRED
+                        </span>
+                      )}
+                      {st.isNearExpiry && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                          <Clock className="w-3 h-3" />
+                          REFRESHER DUE IN {st.daysRemaining} DAYS
+                        </span>
+                      )}
+                      {!st.isExpired && !st.isNearExpiry && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="w-3 h-3" />
+                          VALID CERTIFICATE
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                    {cert.id}
-                  </span>
-                </div>
 
-                <div>
-                  <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider block">
-                    CompliSey Certificate of Competency
-                  </span>
-                  <h3 className="text-base font-bold text-[#071433] mt-0.5">{cert.courseTitle}</h3>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-xl text-xs space-y-1.5 border border-slate-100">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Staff Member:</span>
-                    <strong className="text-slate-900">{cert.studentName}</strong>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Date Issued:</span>
-                    <span>{cert.issueDate}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Audit Status:</span>
-                    <span className="text-emerald-700 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Passed ({cert.gradeScore}) · 4.0 CPD Hours
+                  <div>
+                    <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider block">
+                      CompliSey Certificate of Competency
                     </span>
+                    <h3 className="text-base font-bold text-[#071433] mt-0.5">{cert.courseTitle}</h3>
+                  </div>
+
+                  <div className="bg-slate-50 p-3 rounded-xl text-xs space-y-1.5 border border-slate-100">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Staff Member:</span>
+                      <strong className="text-slate-900">{cert.studentName}</strong>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Date Issued:</span>
+                      <span>{cert.issueDate}</span>
+                    </div>
+                    {cert.expiryDate && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>Expiry Date:</span>
+                        <span className={st.isExpired ? "text-rose-600 font-bold" : st.isNearExpiry ? "text-amber-600 font-bold" : "text-slate-950"}>
+                          {cert.expiryDate}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-600">
+                      <span>Audit Status:</span>
+                      <span className={`${st.isExpired ? 'text-rose-700' : 'text-emerald-700'} font-bold flex items-center gap-1`}>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Passed ({cert.gradeScore}) · 4.0 CPD Hours
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Section 34 Training Validated</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {(st.isNearExpiry || st.isExpired) && (
+                      <button
+                        onClick={() => setActiveTab('wizard')}
+                        className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#071433] text-[11px] font-black transition-colors"
+                      >
+                        Refresher Course
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSelectedCertificateForView(cert)}
+                      className="px-3.5 py-1.5 rounded-xl bg-[#071433] hover:bg-[#0f2c70] text-amber-300 text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                    >
+                      {isCorporateLearner ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Preview Only</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>View PDF</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Valid for FSA/FIU File</span>
-                </div>
-
-                <button
-                  onClick={() => setSelectedCertificateForView(cert)}
-                  className="px-4 py-2 rounded-xl bg-[#071433] hover:bg-[#0f2c70] text-amber-300 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
-                >
-                  <span>View Official PDF</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-12 px-4 bg-white rounded-2xl border border-slate-200">

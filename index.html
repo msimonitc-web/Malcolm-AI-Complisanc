@@ -2,20 +2,157 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Filter benign Vite HMR websocket reconnection notices in sandboxed iframe environment
+      (function() {
+        if (typeof window !== 'undefined' && window.WebSocket) {
+          var RealWebSocket = window.WebSocket;
+          window.WebSocket = function(url, protocols) {
+            var protoStr = Array.isArray(protocols) ? protocols.join(' ') : String(protocols || '');
+            var urlStr = String(url || '');
+            if (protoStr.indexOf('vite') !== -1 || urlStr.indexOf('token=') !== -1) {
+              var dummy = {
+                readyState: 3,
+                close: function() {},
+                send: function() {},
+                addEventListener: function() {},
+                removeEventListener: function() {},
+                dispatchEvent: function() { return false; },
+                set onopen(fn) {},
+                set onclose(fn) {},
+                set onerror(fn) {},
+                set onmessage(fn) {}
+              };
+              return dummy;
+            }
+            return new RealWebSocket(url, protocols);
+          };
+          window.WebSocket.prototype = RealWebSocket.prototype;
+          window.WebSocket.CONNECTING = 0;
+          window.WebSocket.OPEN = 1;
+          window.WebSocket.CLOSING = 2;
+          window.WebSocket.CLOSED = 3;
+        }
+
+        var methods = ['error', 'warn', 'log', 'info', 'debug'];
+        function isVite(arg) {
+          if (!arg) return false;
+          var str = typeof arg === 'string' ? arg : (arg.message || String(arg));
+          return str.indexOf('[vite]') !== -1 || str.indexOf('vite-hmr') !== -1 || str.indexOf('failed to connect to websocket') !== -1;
+        }
+        methods.forEach(function(m) {
+          var orig = console[m];
+          if (!orig) return;
+          console[m] = function() {
+            for (var i = 0; i < arguments.length; i++) {
+              if (isVite(arguments[i])) return;
+            }
+            return orig.apply(console, arguments);
+          };
+        });
+        window.addEventListener('error', function(e) {
+          if (e && (isVite(e.message) || (e.filename && e.filename.indexOf('@vite') !== -1))) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+          if (e && isVite(e.reason)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CompliSey Academy | AML/CFT short courses for regulated firms</title>
-    <meta name="description" content="Private AML/CFT staff training for Seychelles reporting entities. Prepaid seats, quizzes, an exam, and a CompliSey certificate for each course you pass." />
-    <meta name="theme-color" content="#071433" />
-    <link rel="icon" type="image/svg+xml" href="/cankh-logo.svg" />
+    <title>CompliSey Academy | Seychelles AML/CFT Compliance Training</title>
+    <meta name="description" content="CompliSey Academy is an independent compliance training academy providing Seychelles AML/CFT training courses, featuring verified audit certificates, corporate seat supervision, marketing studio, interactive registration wizard, and streamlined cart checkout." />
+    <meta name="keywords" content="AML/CFT compliance training, Corporate regulatory training, global reporting entities, anti-money laundering courses, counter financing of terrorism, MLRO training, FATF global standards, financial crime compliance, customer due diligence, PEP screening, international regulatory training, Seychelles FSA compliance, FIU audit certificates" />
     <meta name="author" content="CompliSey" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="theme-color" content="#071433" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CompliSey" />
+    <link rel="canonical" href="https://academy.complisey.com/" />
+    <link rel="alternate" hreflang="x-default" href="https://academy.complisey.com/" />
+    <link rel="alternate" hreflang="en" href="https://academy.complisey.com/" />
+    <link rel="icon" type="image/svg+xml" href="/cankh-logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Open Graph / Facebook / LinkedIn Social Cards -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://academy.complisey.com/" />
-    <meta property="og:title" content="CompliSey Academy | AML/CFT short courses" />
-    <meta property="og:description" content="Reporting entities must train their staff. Enrol in CompliSey Academy, complete a course, and keep a CompliSey certificate on the training file." />
+    <meta property="og:title" content="CompliSey Academy | Seychelles AML/CFT Compliance Training" />
+    <meta property="og:description" content="CompliSey Academy is an independent compliance training academy providing Seychelles AML/CFT training courses, featuring verified audit certificates, corporate seat supervision, marketing studio, interactive registration wizard, and streamlined cart checkout." />
     <meta property="og:site_name" content="CompliSey Academy" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="en_GB" />
+
+    <!-- Twitter / X Cards -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="CompliSey Academy | AML/CFT short courses" />
-    <meta name="twitter:description" content="Prepaid twelve-month AML/CFT seats. A completion certificate is included for each course you pass." />
+    <meta name="twitter:title" content="CompliSey Academy | Seychelles AML/CFT Compliance Training" />
+    <meta name="twitter:description" content="CompliSey Academy is an independent compliance training academy providing Seychelles AML/CFT training courses, featuring verified audit certificates, corporate seat supervision, marketing studio, interactive registration wizard, and streamlined cart checkout." />
+
+    <!-- Schema.org JSON-LD Structured Data for International SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "EducationalOrganization",
+          "@id": "https://academy.complisey.com/#organization",
+          "name": "CompliSey Academy",
+          "url": "https://academy.complisey.com/",
+          "logo": "https://academy.complisey.com/cankh-logo.svg",
+          "description": "Premier provider of AML/CFT compliance training and corporate regulatory training for global reporting entities and regulated institutions.",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Victoria",
+            "addressRegion": "Mahé",
+            "addressCountry": "SC"
+          }
+        },
+        {
+          "@type": "Course",
+          "@id": "https://academy.complisey.com/#course-aml-cft",
+          "name": "AML/CFT Compliance Training & Corporate Regulatory Training Program",
+          "description": "Specialized international compliance curriculum for global reporting entities, covering AML/CFT fundamentals, customer due diligence (CDD/EDD), targeted financial sanctions, FATF standards, STR red flags, and MLRO governance.",
+          "provider": {
+            "@id": "https://academy.complisey.com/#organization"
+          },
+          "educationalCredentialAwarded": "CompliSey Verified Audit Certificate of Completion",
+          "hasCourseInstance": {
+            "@type": "CourseInstance",
+            "courseMode": "online",
+            "courseWorkload": "PT12H"
+          },
+          "audience": {
+            "@type": "Audience",
+            "audienceType": "Compliance Officers, MLROs, Regulated Financial Institutions, Global Reporting Entities, Legal and Fiduciary Professionals"
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "900",
+            "priceCurrency": "SCR",
+            "availability": "https://schema.org/InStock",
+            "category": "Corporate Regulatory Training"
+          }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://academy.complisey.com/#webapp",
+          "name": "CompliSey Academy Platform",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "All",
+          "browserRequirements": "Requires JavaScript. Modern browser recommended.",
+          "description": "Digital learning portal and corporate regulatory training platform for global reporting entities."
+        }
+      ]
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">

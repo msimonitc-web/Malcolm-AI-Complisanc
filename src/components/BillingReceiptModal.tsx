@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Printer, Download, CheckCircle, ShieldCheck } from 'lucide-react';
 import { useAcademy } from '../context/AcademyContext';
 import { CompliseyLogo } from './CompliseyLogo';
+import { WatermarkOverlay } from './WatermarkOverlay';
 
 export const BillingReceiptModal: React.FC = () => {
   const { selectedTransactionForReceipt, setSelectedTransactionForReceipt, formatPrice } = useAcademy();
@@ -15,7 +16,7 @@ export const BillingReceiptModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#071433]/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-[70] overflow-y-auto bg-[#071433]/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
         {/* Modal Top Bar */}
         <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -42,7 +43,8 @@ export const BillingReceiptModal: React.FC = () => {
         </div>
 
         {/* Printable Invoice Container */}
-        <div className="p-6 sm:p-8 space-y-6 text-slate-800 print:p-0">
+        <div className="p-6 sm:p-8 space-y-6 text-slate-800 print:p-0 relative overflow-hidden">
+          <WatermarkOverlay opacity={0.06} />
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-200">
             <div>

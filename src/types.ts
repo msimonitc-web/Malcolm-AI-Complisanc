@@ -10,6 +10,22 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface ShortAnswerQuestion {
+  id: string;
+  question: string;
+  sampleAnswer: string;
+  gradingRubric: string;
+}
+
+export interface FinalExamQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  sourceUnit?: string;
+}
+
 export interface ResourceItem {
   id: string;
   name: string;
@@ -45,6 +61,8 @@ export interface Lesson {
   previewAllowed?: boolean;
   summary: string;
   notes: string;
+  transcript?: string;
+  audioUrl?: string;
   resources: ResourceItem[];
   quiz?: QuizQuestion[];
   comments?: LessonComment[];
@@ -55,6 +73,8 @@ export interface CourseModule {
   title: string;
   description: string;
   lessons: Lesson[];
+  unitQuiz?: QuizQuestion[];
+  shortAnswerQuestions?: ShortAnswerQuestion[];
 }
 
 export interface Instructor {
@@ -87,6 +107,13 @@ export interface Course {
   tags: string[];
   featured?: boolean;
   modules: CourseModule[];
+  finalExam?: FinalExamQuestion[];
+  caseStudy?: {
+    id: string;
+    title: string;
+    scenario: string;
+    tasks: string[];
+  };
 }
 
 export interface EnrolledCourseProgress {
@@ -96,10 +123,19 @@ export interface EnrolledCourseProgress {
   completedLessonIds: string[];
   activeLessonId: string;
   personalNotes: Record<string, string>; // lessonId -> markdown note
-  quizScores: Record<string, number>; // lessonId -> percentage score
+  quizScores: Record<string, number>; // lessonId or unitId -> percentage score
+  unitQuizScores?: Record<string, number>; // unitId -> score %
+  examScore?: number; // Final exam percentage score
   isCompleted: boolean;
   certificateClaimedAt?: string;
   certificateId?: string;
+}
+
+export interface CourseTranscriptTopic {
+  moduleTitle: string;
+  durationMinutes: number;
+  topics: string[];
+  learningOutcomes: string[];
 }
 
 export interface Certificate {
@@ -107,10 +143,16 @@ export interface Certificate {
   courseId: string;
   courseTitle: string;
   studentName: string;
+  studentTitle?: string;
+  companyName?: string;
   issueDate: string;
+  expiryDate?: string;
   instructorName: string;
   gradeScore: string;
   verificationCode: string;
+  cpdHours?: number;
+  transcriptTopics?: CourseTranscriptTopic[];
+  statutoryCompetencies?: string[];
 }
 
 export interface Transaction {
@@ -123,6 +165,9 @@ export interface Transaction {
   status: 'succeeded' | 'processing' | 'refunded';
   createdAt: string;
   invoiceNumber: string;
+  companyName?: string;
+  orderId?: string;
+  proformaNumber?: string;
   paymentMethodDetails: {
     brand?: string;
     last4?: string;
@@ -156,6 +201,41 @@ export interface UserAccount {
   companyName: string;
   avatar: string;
   joinCode?: string;
+  sessionId?: string;
+  registeredAt?: string;
+}
+
+export interface StaffAssessmentWeakness {
+  id: string;
+  topicTitle: string;
+  category: string;
+  score: number; // percentage
+  status: 'critical' | 'moderate' | 'satisfactory';
+  conceptTested: string;
+  errorIdentified: string;
+  statutoryReference: string;
+  recommendedAction: string;
+}
+
+export interface StaffAssessmentProfile {
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  role: string;
+  overallScore: number;
+  completedCertificates: {
+    certificateId: string;
+    courseId: string;
+    courseTitle: string;
+    issueDate: string;
+    gradeScore: string;
+    verificationCode: string;
+    cpdHours: number;
+  }[];
+  domainScores: Record<string, number>;
+  weaknesses: StaffAssessmentWeakness[];
+  hrRemediationStatus: 'completed' | 'in_progress' | 'action_required';
+  hrNotes?: string;
 }
 
 export interface CorporateTeamMember {
@@ -169,6 +249,33 @@ export interface CorporateTeamMember {
   overallScore: number;
   lastActive: string;
   certificatesCount: number;
+  assessmentProfile?: StaffAssessmentProfile;
+}
+
+export type CourseCartPackageType = 'level1' | 'level2' | 'pack' | 'both';
+
+export interface CartItem {
+  id: string;
+  courseId: string;
+  courseTitle: string;
+  packageType: CourseCartPackageType;
+  seatCount: number;
+  unitPrice: number;
+  totalPrice: number;
+  category?: string;
+  cpdHours?: number;
+  modulesCount?: number;
+  description?: string;
+}
+
+export interface OrderLineItem {
+  courseId: string;
+  courseTitle: string;
+  packageType: CourseCartPackageType;
+  seatCount: number;
+  unitPrice: number;
+  totalAmount: number;
+  cpdHours?: number;
 }
 
 export interface EnrollmentOrder {
@@ -186,6 +293,8 @@ export interface EnrollmentOrder {
   createdAt: string;
   activatedAt?: string;
   activatedBy?: string;
+  activationToken?: string;
+  activationTokens?: string[];
   companyName: string;
   companyAddress?: string;
   contactName: string;
@@ -194,8 +303,68 @@ export interface EnrollmentOrder {
   bankReferenceCode: string;
   notes?: string;
   taxInvoiceNumber?: string;
+  items?: OrderLineItem[];
+  isCorporate?: boolean;
+  receiptConfirmationSent?: boolean;
+  receiptConfirmationSentAt?: string;
+  remittanceSubmitted?: boolean;
+  remittanceSubmittedAt?: string;
+  remittanceBankName?: string;
+  remittanceReference?: string;
+  remittanceNotes?: string;
 }
 
-export type ActiveTab = 'dashboard' | 'explore' | 'player' | 'certificates' | 'billing' | 'admin' | 'corporate';
+export interface CourseActivationToken {
+  token: string;
+  courseIds: string[];
+  courseTitle: string;
+  issuedBy: 'Malcolm Simon' | "Eric D'Souza" | 'Eric' | string;
+  issuedToName: string;
+  issuedToEmail: string;
+  orderId?: string;
+  proformaNumber?: string;
+  taxInvoiceNumber?: string;
+  companyName?: string;
+  seatNumber?: number; // e.g. Seat 1 of 22
+  totalSeatsInOrder?: number; // e.g. 22
+  issuedAt: string;
+  status: 'active' | 'assigned' | 'redeemed' | 'revoked';
+  redeemedAt?: string;
+  redeemedByEmail?: string;
+  redeemedByName?: string;
+  assignedToName?: string;
+  assignedToEmail?: string;
+  assignedAt?: string;
+  isNonTransferable?: boolean;
+  notes?: string;
+}
+
+export interface AdminEmailNotification {
+  id: string;
+  orderId: string;
+  proformaNumber: string;
+  ccsBookingId: string;
+  studentName: string;
+  studentEmail: string;
+  studentPhone?: string;
+  companyName: string;
+  companyAddress?: string;
+  coursePackageTitle: string;
+  courseId: string;
+  seatCount: number;
+  unitPrice: number;
+  totalAmount: number;
+  currency: string;
+  recipientEmails: string[];
+  subject: string;
+  htmlContent: string;
+  textContent: string;
+  status: 'sent' | 'delivered';
+  notes?: string;
+  sentAt: string;
+  isRead?: boolean;
+}
+
+export type ActiveTab = 'dashboard' | 'explore' | 'player' | 'certificates' | 'billing' | 'admin' | 'corporate' | 'wizard' | 'marketing';
 
 export type LegalDocType = 'privacy' | 'terms' | null;

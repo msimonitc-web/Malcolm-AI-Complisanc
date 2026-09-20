@@ -1,116 +1,187 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard,
   Compass,
   Award,
   CreditCard,
-  Search,
-  KeyRound,
-  FileCheck,
+  ShieldCheck,
+  Building2,
+  User,
+  LogIn,
+  LogOut,
+  BookOpen,
   CheckCircle2,
   AlertTriangle,
-  Info,
-  ChevronDown,
-  ShieldCheck,
+  ArrowRight,
+  Sparkles,
+  Key,
+  ShoppingCart,
+  Film,
+  Video,
 } from 'lucide-react';
 import { useAcademy } from '../context/AcademyContext';
-import { ActiveTab, CurrencyType } from '../types';
+import { ActiveTab, UserAccount } from '../types';
 import { CompliseyLogo } from './CompliseyLogo';
+import { useCsrf, CsrfInput } from '../context/CsrfContext';
+import { ThemeToggle } from './ThemeToggle';
 
-export const Navigation: React.FC = () => {
+interface NavigationProps {
+  onOpenRedeemModal?: () => void;
+  onNavigateAdmin?: () => void;
+}
+
+export const Navigation: React.FC<NavigationProps> = ({
+  onOpenRedeemModal,
+  onNavigateAdmin,
+}) => {
   const {
-    student,
+    currentUser,
+    logout,
+    loginWithCredentials,
     activeTab,
     setActiveTab,
-    currency,
-    setCurrency,
-    searchQuery,
-    setSearchQuery,
-    transactions,
     certificates,
-    enrolledProgress,
-    courses,
     orders,
-    processPaymentEnrollment,
-    openCoursePlayer,
+    unreadAdminNotificationsCount,
+    setIsCartOpen,
+    cartItemsCount,
+    setIsRegistrationWizardOpen,
+    setIsMarketingStudioOpen,
+    setIsE2ETestModalOpen,
+    setIsCertificateVerifierOpen,
   } = useAcademy();
 
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showJoinCodeModal, setShowJoinCodeModal] = useState(false);
-  const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [joinCodeError, setJoinCodeError] = useState('');
-  const [joinCodeSuccess, setJoinCodeSuccess] = useState('');
+  const { csrfToken, submitProtectedForm } = useCsrf();
 
-  const enrolledCount = Object.keys(enrolledProgress).length;
-  const pendingOrdersCount = orders.filter((o) => o.status === 'pending_payment').length;
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState('');
 
+  const userEmail = currentUser?.email?.trim().toLowerCase();
+  const userCompany = currentUser?.companyName?.trim().toLowerCase();
+
+  const userScopedPendingOrders = orders.filter((o) => {
+    if (o.status !== 'pending_payment') return false;
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    if (currentUser.role === 'corporate') {
+      const isCompany = Boolean(
+        userCompany &&
+        userCompany !== 'individual learner' &&
+        o.companyName?.trim().toLowerCase() === userCompany
+      );
+      const isEmail = Boolean(userEmail && o.contactEmail?.trim().toLowerCase() === userEmail);
+      return isCompany || isEmail;
+    }
+    return Boolean(userEmail && o.contactEmail?.trim().toLowerCase() === userEmail);
+  });
+  const pendingOrdersCount = userScopedPendingOrders.length;
+
+  // Build clean, role-tailored navigation items
   const navItems: {
     id: ActiveTab;
     label: string;
     icon: React.FC<{ className?: string }>;
     badgeCount?: number;
     badgeStyle?: string;
-  }[] = [
-    { id: 'dashboard', label: 'My Compliance', icon: LayoutDashboard },
-    { id: 'explore', label: 'AML/CFT Courses', icon: Compass },
-    { id: 'certificates', label: 'Audit Certificates', icon: Award, badgeCount: certificates.length },
-    { id: 'billing', label: 'Seats & Invoices', icon: CreditCard },
-    {
-      id: 'admin',
-      label: 'Admin Desk',
-      icon: ShieldCheck,
-      badgeCount: pendingOrdersCount,
-      badgeStyle: 'bg-amber-400 text-[#071433]',
-    },
-  ];
+  }[] = [];
 
-  const handleRedeemJoinCode = (e: React.FormEvent) => {
+  if (!currentUser) {
+    // Visitor navigation: Invoices & Payments are restricted until registration
+    navItems.push(
+      { id: 'dashboard', label: 'Overview & Courses', icon: BookOpen },
+      { id: 'explore', label: 'Course Curriculum', icon: Compass }
+    );
+  } else if (currentUser.role === 'admin') {
+    // Complisey Back Office Administrator navigation (Malcolm & Eric)
+    navItems.push(
+      {
+        id: 'admin',
+        label: 'Back Office Operations',
+        icon: ShieldCheck,
+        badgeCount: pendingOrdersCount + unreadAdminNotificationsCount,
+        badgeStyle: 'bg-amber-400 text-[#071433]',
+      },
+      {
+        id: 'billing',
+        label: 'Invoices & Bank Wires',
+        icon: CreditCard,
+        badgeCount: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
+        badgeStyle: 'bg-amber-400 text-[#071433]',
+      },
+      { id: 'marketing', label: 'Marketing & Reels Studio', icon: Film },
+      { id: 'corporate', label: 'Corporate Accounts Oversight', icon: Building2 },
+      { id: 'explore', label: 'Course Curriculum & Audits', icon: Compass }
+    );
+  } else if (currentUser.role === 'corporate') {
+    // Corporate Administrator & HR navigation
+    navItems.push(
+      { id: 'corporate', label: 'Corporate Admin & HR Portal', icon: Building2 },
+      {
+        id: 'billing',
+        label: 'Corporate Invoices & Wires',
+        icon: CreditCard,
+        badgeCount: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
+        badgeStyle: 'bg-amber-400 text-[#071433]',
+      },
+      { id: 'explore', label: 'Course Catalog & Syllabus', icon: Compass }
+    );
+  } else {
+    // Regular Learner navigation
+    navItems.push(
+      { id: 'dashboard', label: 'My Compliance Dashboard', icon: BookOpen },
+      { id: 'explore', label: 'Course Catalog', icon: Compass },
+      { id: 'certificates', label: 'My Compliance Records', icon: Award, badgeCount: certificates.length },
+      {
+        id: 'billing',
+        label: 'My Invoices & Payments',
+        icon: CreditCard,
+        badgeCount: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
+        badgeStyle: 'bg-amber-400 text-[#071433]',
+      }
+    );
+  }
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setJoinCodeError('');
-    setJoinCodeSuccess('');
+    setLoginError('');
+    setLoginSuccess('');
 
-    const code = joinCodeInput.trim().toUpperCase();
-
-    if (code === 'DEMO2026') {
-      setJoinCodeError(
-        'DEMO2026 is an informational preview code. To unlock instant seat enrollment, use live corporate code: COMPLISEY-SEAT-2026'
-      );
-      return;
-    }
-
-    if (code === 'COMPLISEY-SEAT-2026' || code === 'FSA-STAFF-2026' || code === 'VICTORIA2026') {
-      // Enroll in the second AML course instantly
-      const targetCourse = courses[1] || courses[0];
-      processPaymentEnrollment(
-        targetCourse.id,
-        'stripe',
-        { brand: 'Prepaid Corporate Seat', last4: 'SEAT' },
-        code,
-        targetCourse.price
-      );
-      setJoinCodeSuccess(`Seat code activated! Enrolled in "${targetCourse.title}".`);
+    const res = loginWithCredentials(loginEmail, loginPassword);
+    if (res.success) {
+      setLoginSuccess(res.message);
+      try {
+        await submitProtectedForm('/api/auth/login-credentials', {
+          email: loginEmail,
+          _csrf: csrfToken,
+        });
+      } catch (err) {
+        console.warn('Login telemetry recorded:', err);
+      }
       setTimeout(() => {
-        setShowJoinCodeModal(false);
-        setJoinCodeInput('');
-        openCoursePlayer(targetCourse.id);
-      }, 1200);
-      return;
+        setShowLoginModal(false);
+        setLoginEmail('');
+        setLoginPassword('');
+      }, 800);
+    } else {
+      setLoginError(res.message);
     }
+  };
 
-    setJoinCodeError('Invalid seat join code. Try corporate voucher: COMPLISEY-SEAT-2026');
+  const scrollToRegistration = () => {
+    setActiveTab('dashboard');
+    setTimeout(() => {
+      const el = document.getElementById('registration-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   return (
     <>
-      {/* Statutory / Local Review Banner */}
-      <div className="bg-[#0b2149] text-amber-300 text-xs px-4 py-1.5 text-center font-medium border-b border-[#14326d] flex items-center justify-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-        <span>
-          Local review build. Certificates are marked DRAFT. <strong>DEMO2026</strong> is not a live join code.
-        </span>
-      </div>
-
-      {/* Top Header Navigation */}
+      {/* Top Header Navigation - Clean, Uncluttered, Authoritative */}
       <header className="sticky top-0 z-40 bg-[#071433] text-white border-b border-[#13285c] shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3 sm:gap-4">
@@ -171,150 +242,128 @@ export const Navigation: React.FC = () => {
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Prepaid Seat / Join Code Button */}
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              {/* How to Register Quick Walkthrough */}
               <button
-                onClick={() => setShowJoinCodeModal(true)}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold transition-colors"
-                title="Enter 12-Month Prepaid Seat Join Code"
+                onClick={() => setIsRegistrationWizardOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-700 hover:border-amber-400/50 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Watch How to Register & Get Started Walkthrough"
               >
-                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                <span>Join Code</span>
+                <Video className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden lg:inline">How to Register</span>
               </button>
 
-              {/* Currency Selector (USD, SCR, EUR, GBP) */}
-              <div className="flex items-center bg-[#0d2250] rounded-lg p-0.5 border border-[#1b3a7a]">
-                {(['USD', 'SCR', 'EUR', 'GBP'] as CurrencyType[]).map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setCurrency(c)}
-                    className={`px-2 py-1 text-[11px] font-bold rounded transition-all ${
-                      currency === c
-                        ? 'bg-amber-400 text-[#071433] shadow-xs'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+              {/* User-Facing Dark Theme Toggle */}
+              <ThemeToggle variant="compact" />
 
-              {/* Student Profile Badge */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center gap-2 p-1 rounded-full hover:ring-2 hover:ring-amber-400/40 focus:outline-hidden transition-all text-left"
-                  aria-label="Compliance user profile"
-                >
-                  <img
-                    src={student.avatar}
-                    alt={student.name}
-                    className="w-8 h-8 rounded-full object-cover border border-amber-400/40"
-                  />
-                  <div className="hidden xl:block">
-                    <span className="text-xs font-bold text-white block leading-tight">
-                      {student.name}
-                    </span>
-                    <span className="text-[10px] text-slate-300 block leading-none">
-                      Regulated Entity Staff
-                    </span>
-                  </div>
-                </button>
-
-                {/* Profile dropdown */}
-                {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <p className="text-xs font-bold text-slate-900">{student.name}</p>
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{student.title}</p>
-                      <p className="text-[10px] text-indigo-700 font-mono mt-0.5">{student.email}</p>
-                    </div>
-
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          setActiveTab('dashboard');
-                          setShowProfileMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center justify-between"
-                      >
-                        <span>Mandatory Training Dashboard</span>
-                        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold text-[10px]">
-                          {enrolledCount} Active
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setActiveTab('certificates');
-                          setShowProfileMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center justify-between"
-                      >
-                        <span>Compliance Audit File Certificates</span>
-                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
-                          {certificates.length} Issued
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setActiveTab('billing');
-                          setShowProfileMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center justify-between"
-                      >
-                        <span>Corporate Seats &amp; Invoices</span>
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px]">
-                          {transactions.length} Records
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setActiveTab('admin');
-                          setShowProfileMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-amber-900 bg-amber-50/60 font-bold hover:bg-amber-100/60 flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
-                          <span>Admin Activation Desk</span>
-                        </div>
-                        {pendingOrdersCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500 text-[#071433] font-bold text-[10px]">
-                            {pendingOrdersCount} Pending
-                          </span>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setShowJoinCodeModal(true);
-                          setShowProfileMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
-                      >
-                        <KeyRound className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Redeem Prepaid Seat Join Code</span>
-                      </button>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 px-4 text-[11px] text-slate-400">
-                      Complisanc Consulting Services (SEY) trading as Complisey
-                    </div>
-                  </div>
+              {/* Checkout Cart Button */}
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 hover:border-amber-400/50 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="View Checkout Cart"
+              >
+                <ShoppingCart className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Cart</span>
+                {cartItemsCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-400 text-[#071433] transition-transform">
+                    {cartItemsCount}
+                  </span>
                 )}
-              </div>
+              </button>
+
+              {/* Public Certificate Authenticator */}
+              <button
+                onClick={() => setIsCertificateVerifierOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 hover:text-blue-200 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Verify an official CompliSey AML/CFT Certificate ID"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden sm:inline">Verify Certificate</span>
+              </button>
+
+              {/* Course Activation Token Redemption Button */}
+              <button
+                onClick={onOpenRedeemModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-400/50 bg-amber-400/10 hover:bg-amber-400/25 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Redeem course activation token or link received from Malcolm Simon or Eric"
+              >
+                <Key className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Activate Course</span>
+              </button>
+
+              {/* E2E Test Suite Simulator Launcher (strictly in explicit test drill mode via ?test=e2e) */}
+              {typeof window !== 'undefined' && window.location.search.includes('test') && (
+                <button
+                  onClick={() => setIsE2ETestModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-emerald-200 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  title="Run full End-to-End Compliance Lifecycle Simulator"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">E2E Simulator</span>
+                </button>
+              )}
+
+              {!currentUser ? (
+                // Unauthenticated Visitor Controls
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowLoginModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Log In</span>
+                  </button>
+
+                  <button
+                    onClick={scrollToRegistration}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-[#071433] text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    <span>Register / Enroll</span>
+                    <ArrowRight className="w-3 h-3 text-[#071433]" />
+                  </button>
+                </div>
+              ) : (
+                // Authenticated Controls (Learner, Corporate, or Malcolm/Eric Admin)
+                <div className="flex items-center gap-2">
+                  {currentUser.role === 'admin' ? (
+                    <button
+                      onClick={onNavigateAdmin}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 text-xs font-bold transition-colors cursor-pointer"
+                      title="Open restricted Admin Portal"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="hidden sm:inline">Admin Terminal:</span>
+                      <span>{currentUser.name.split(' ')[0]}</span>
+                    </button>
+                  ) : currentUser.role === 'corporate' ? (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold">
+                      <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="hidden sm:inline">MLRO:</span>
+                      <span>{currentUser.name.split(' ')[0]}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+                      <User className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{currentUser.name.split(' ')[0]}</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={logout}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-rose-500/25 text-slate-300 hover:text-rose-200 border border-white/15 hover:border-rose-500/40 text-xs font-semibold transition-all cursor-pointer"
+                    title="Log Out"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Log Out</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation Bar (Guarantees Touch Targets >= 44px) */}
+      {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#071433] text-white border-t border-[#13285c] shadow-xl px-2 py-1 safe-area-bottom">
         <nav className="flex items-center justify-around">
           {navItems.map((item) => {
@@ -348,91 +397,167 @@ export const Navigation: React.FC = () => {
               </button>
             );
           })}
+
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="flex flex-col items-center justify-center min-w-[54px] min-h-[48px] py-1 px-1 rounded-xl text-slate-300 hover:text-white active:bg-white/10"
+          >
+            <div className="relative">
+              <ShoppingCart className="w-5 h-5" />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-2 w-4 h-4 rounded-full text-[9px] font-black bg-amber-400 text-[#071433] flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] tracking-tight mt-0.5 leading-tight">Cart</span>
+          </button>
+
+          {!currentUser ? (
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="flex flex-col items-center justify-center min-w-[54px] min-h-[48px] py-1 px-1 rounded-xl text-amber-300 active:bg-white/10"
+            >
+              <LogIn className="w-5 h-5" />
+              <span className="text-[10px] tracking-tight mt-0.5 leading-tight">Log In</span>
+            </button>
+          ) : (
+            <button
+              onClick={logout}
+              className="flex flex-col items-center justify-center min-w-[54px] min-h-[48px] py-1 px-1 rounded-xl text-rose-300 active:bg-white/10"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-[10px] tracking-tight mt-0.5 leading-tight">Log Out</span>
+            </button>
+          )}
         </nav>
       </div>
 
-      {/* Join Code / Prepaid Seat Modal */}
-      {showJoinCodeModal && (
+      {/* Clean, Simple Login Modal */}
+      {showLoginModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-[#0b1b3d] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-[#1d3d75] animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-[#071433] text-amber-400 flex items-center justify-center shadow-xs">
-                  <KeyRound className="w-5 h-5" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#071433] text-amber-400 flex items-center justify-center shadow-xs border border-amber-400/30">
+                  <LogIn className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Redeem Prepaid Seat Join Code
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    CompliSey Academy Login
                   </h3>
-                  <p className="text-xs text-slate-500">
-                    CompliSey 12-Month Regulated Staff Training Seat
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Sign in to access your compliance portal
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setShowJoinCodeModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
+                onClick={() => setShowLoginModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleRedeemJoinCode} className="space-y-4">
+            {/* Quick Demo Pre-fill for User Portal (Learners and Corporate Accounts Only) */}
+            <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-[#071433]/70 border border-slate-200 dark:border-[#193566]">
+              <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                Quick-Select User Portal Account:
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginEmail('learner@demo.local');
+                    setLoginPassword('DemoLearner2026!');
+                  }}
+                  className="p-2 text-left rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 text-xs font-bold text-emerald-900 dark:text-emerald-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="font-bold">Registered Learner</span>
+                  </div>
+                  <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">Alex Rivera (Compliance Officer)</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginEmail('corp@demo.local');
+                    setLoginPassword('DemoCorp2026!');
+                  }}
+                  className="p-2 text-left rounded-lg border border-blue-200 dark:border-blue-700/50 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-xs font-bold text-blue-900 dark:text-blue-300 transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-bold">Corporate MLRO</span>
+                  </div>
+                  <div className="text-[10px] text-blue-700 dark:text-blue-400 font-normal">Jean-Luc Confait (Victoria Fiduciary)</div>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+              <CsrfInput formName="credentials-login" />
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Enter Join Code
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Email Address
                 </label>
                 <input
-                  type="text"
-                  placeholder="e.g. COMPLISEY-SEAT-2026"
-                  value={joinCodeInput}
-                  onChange={(e) => setJoinCodeInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono uppercase text-slate-900 focus:outline-hidden focus:border-[#071433] focus:bg-white"
+                  type="email"
+                  required
+                  placeholder="name@company.sc"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#071433] border border-slate-300 dark:border-[#1d3d75] rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-400"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Corporate join codes are provided by your firm's MLRO or CompliSey invoice.
-                </p>
               </div>
 
-              {joinCodeError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span>{joinCodeError}</span>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#071433] border border-slate-300 dark:border-[#1d3d75] rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-400"
+                />
+              </div>
+
+              {loginError && (
+                <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-800 dark:text-rose-200 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  <span>{loginError}</span>
                 </div>
               )}
 
-              {joinCodeSuccess && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2 font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{joinCodeSuccess}</span>
+              {loginSuccess && (
+                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-xl text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2 font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>{loginSuccess}</span>
                 </div>
               )}
-
-              <div className="p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl text-[11px] text-blue-900 space-y-1">
-                <div className="font-bold flex items-center gap-1">
-                  <Info className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Sample Live Join Codes for Evaluation:</span>
-                </div>
-                <div className="font-mono text-slate-700">
-                  • <strong className="text-blue-900">COMPLISEY-SEAT-2026</strong> (Full Corporate Seat)
-                </div>
-              </div>
 
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowJoinCodeModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50"
+                  onClick={() => setShowLoginModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#071433] text-amber-300 hover:bg-[#0c245c] text-xs font-bold shadow-md transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-[#071433] dark:bg-amber-400 text-amber-300 dark:text-[#071433] hover:bg-[#0c245c] dark:hover:bg-amber-300 text-xs font-bold shadow-md transition-colors cursor-pointer"
                 >
-                  Activate Seat
+                  Sign In
                 </button>
               </div>
+
+
             </form>
           </div>
         </div>
