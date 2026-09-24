@@ -94,25 +94,18 @@ export const Navigation: React.FC<NavigationProps> = ({
       { id: 'explore', label: 'Course Curriculum', icon: Compass }
     );
   } else if (currentUser.role === 'admin') {
-    // Complisey Back Office Administrator navigation (Malcolm & Eric)
+    // Admin on frontend sees standard navigation (Admin portal is accessed strictly via /admin URL)
     navItems.push(
-      {
-        id: 'admin',
-        label: 'Back Office Operations',
-        icon: ShieldCheck,
-        badgeCount: pendingOrdersCount + unreadAdminNotificationsCount,
-        badgeStyle: 'bg-amber-400 text-[#071433]',
-      },
+      { id: 'dashboard', label: 'My Compliance Dashboard', icon: BookOpen },
+      { id: 'explore', label: 'Course Catalog', icon: Compass },
+      { id: 'certificates', label: 'My Compliance Records', icon: Award, badgeCount: certificates.length },
       {
         id: 'billing',
-        label: 'Invoices & Bank Wires',
+        label: 'Invoices & Payments',
         icon: CreditCard,
         badgeCount: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
         badgeStyle: 'bg-amber-400 text-[#071433]',
-      },
-      { id: 'marketing', label: 'Marketing & Reels Studio', icon: Film },
-      { id: 'corporate', label: 'Corporate Accounts Oversight', icon: Building2 },
-      { id: 'explore', label: 'Course Curriculum & Audits', icon: Compass }
+      }
     );
   } else if (currentUser.role === 'corporate') {
     // Corporate Administrator & HR navigation
@@ -325,20 +318,9 @@ export const Navigation: React.FC<NavigationProps> = ({
               ) : (
                 // Authenticated Controls (Learner, Corporate, or Malcolm/Eric Admin)
                 <div className="flex items-center gap-2">
-                  {currentUser.role === 'admin' ? (
-                    <button
-                      onClick={onNavigateAdmin}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 text-xs font-bold transition-colors cursor-pointer"
-                      title="Open restricted Admin Portal"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="hidden sm:inline">Admin Terminal:</span>
-                      <span>{currentUser.name.split(' ')[0]}</span>
-                    </button>
-                  ) : currentUser.role === 'corporate' ? (
+                  {currentUser.role === 'admin' || currentUser.role === 'corporate' ? (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold">
-                      <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                      <span className="hidden sm:inline">MLRO:</span>
+                      <User className="w-3.5 h-3.5 text-blue-400" />
                       <span>{currentUser.name.split(' ')[0]}</span>
                     </div>
                   ) : (

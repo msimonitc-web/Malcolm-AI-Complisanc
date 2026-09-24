@@ -234,6 +234,12 @@ interface AcademyContextType {
   ) => { success: boolean; message: string };
   isChangePasswordOpen: boolean;
   setIsChangePasswordOpen: (open: boolean) => void;
+  pendingFirstLoginAdminEmail: string | null;
+  setPendingFirstLoginAdminEmail: (email: string | null) => void;
+  usdExchangeRate: number;
+  setUsdExchangeRate: (rate: number) => void;
+  pricingPercentageAdjustment: number;
+  setPricingPercentageAdjustment: (percent: number) => void;
 }
 
 const AcademyContext = createContext<AcademyContextType | undefined>(undefined);
@@ -279,6 +285,69 @@ export const AcademyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isE2ETestModalOpen, setIsE2ETestModalOpen] = useState<boolean>(false);
   const [isCertificateVerifierOpen, setIsCertificateVerifierOpen] = useState<boolean>(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
+  const [pendingFirstLoginAdminEmail, setPendingFirstLoginAdminEmail] = useState<string | null>(null);
+  const [usdExchangeRate, setUsdExchangeRateState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('complisey_usd_exchange_rate');
+      if (saved) {
+        const val = parseFloat(saved);
+        if (!isNaN(val) && val > 0) return val;
+      }
+    } catch (e) {
+      console.warn('Failed to parse USD exchange rate', e);
+    }
+    return 15.0; // Default pegged to 15.0 SCR per USD
+  });
+
+  const setUsdExchangeRate = (rate: number) => {
+    const validRate = Math.max(1, rate);
+    setUsdExchangeRateState(validRate);
+    try {
+      localStorage.setItem('complisey_usd_exchange_rate', validRate.toString());
+      systemAuditLogService.logEvent(
+        'SECURITY',
+        'INFO',
+        'FX_EXCHANGE_RATE_UPDATED',
+        'Malcolm Simon',
+        'admin',
+        `USD exchange rate updated to ${validRate.toFixed(2)} SCR per USD by administrator.`,
+        { exchangeRate: validRate, timestamp: new Date().toISOString() }
+      );
+    } catch (e) {
+      console.warn('Failed to save USD exchange rate', e);
+    }
+  };
+
+  const [pricingPercentageAdjustment, setPricingPercentageAdjustmentState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('complisey_pricing_percentage_adjustment');
+      if (saved) {
+        const val = parseFloat(saved);
+        if (!isNaN(val)) return val;
+      }
+    } catch (e) {
+      console.warn('Failed to parse pricing percentage adjustment', e);
+    }
+    return 0; // Default 0%
+  });
+
+  const setPricingPercentageAdjustment = (percent: number) => {
+    setPricingPercentageAdjustmentState(percent);
+    try {
+      localStorage.setItem('complisey_pricing_percentage_adjustment', percent.toString());
+      systemAuditLogService.logEvent(
+        'SECURITY',
+        'INFO',
+        'PRICING_PERCENTAGE_ADJUSTED',
+        'Malcolm Simon',
+        'admin',
+        `Course base prices adjusted by ${percent > 0 ? `+${percent}%` : `${percent}%`} by administrator.`,
+        { adjustmentPercent: percent, timestamp: new Date().toISOString() }
+      );
+    } catch (e) {
+      console.warn('Failed to save pricing percentage adjustment', e);
+    }
+  };
   const [adminPasswords, setAdminPasswords] = useState<Record<string, string>>(() => {
     try {
       const saved = localStorage.getItem('complisey_admin_passwords');
@@ -456,9 +525,7 @@ export const AcademyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const cart: CartItem[] = rawCart.map((item) => {
     const isCorp = cartEnrollmentType === 'corporate';
     const effectiveSeats = isCorp ? Math.max(1, item.seatCount || 1) : 1;
-    const unitPrice = isCorp
-      ? getSeatRateSCR(effectiveSeats, true, item.packageType)
-      : INDIVIDUAL_PRICING[item.packageType] || 2500;
+    const unitPrice = getSeatRateSCR(effectiveSeats, isCorp, item.packageType, pricingPercentageAdjustment);
     const totalPrice = unitPrice * effectiveSeats;
 
     return {
@@ -472,7 +539,7 @@ export const AcademyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const cartItemsCount = cart.length;
   const cartTotalSeats = cart.reduce((acc, it) => acc + it.seatCount, 0);
   const cartTotalSCR = cart.reduce((acc, it) => acc + it.totalPrice, 0);
-  const cartTotalUSD = Math.round(cartTotalSCR / 14.5);
+  const cartTotalUSD = Math.round(cartTotalSCR / usdExchangeRate);
   const cartSavingsSCR = cart.reduce((acc, it) => {
     const regularRate = INDIVIDUAL_PRICING[it.packageType] || 2500;
     const fullPrice = regularRate * it.seatCount;
@@ -1098,6 +1165,12 @@ export const AcademyProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }));
       setActiveTab('admin');
 
+      const changedKey = `complisey_admin_password_changed_${isEric ? 'eric' : 'malcolm'}`;
+      const hasChanged = localStorage.getItem(changedKey) === 'true';
+      if (!hasChanged) {
+        setPendingFirstLoginAdminEmail(adminEmail);
+      }
+
       systemAuditLogService.logEvent(
         'AUTH',
         'INFO',
@@ -1301,7 +1374,7 @@ export const AcademyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const course = courses.find((c) => c.id === courseId);
     const resolvedIsCorporate = isCorporate !== undefined ? isCorporate : (seatCount > 1 || Boolean(companyName && companyName !== 'Individual Learner'));
     const resolvedPackageType = packageType || resolvePackageType(courseId);
-    const calculation = calculateOrderTotalSCR(seatCount, resolvedIsCorporate, resolvedPackageType);
+    const calculation = calculateOrderTotalSCR(seatCount, resolvedIsCorporate, resolvedPackageType, pricingPercentageAdjustment);
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const proformaNum = `PRF-CS-2026-${randomSuffix}`;
@@ -2329,6 +2402,12 @@ export const AcademyProvider: React.FC<{ children: React.ReactNode }> = ({ child
         changeAdminPassword,
         isChangePasswordOpen,
         setIsChangePasswordOpen,
+        pendingFirstLoginAdminEmail,
+        setPendingFirstLoginAdminEmail,
+        usdExchangeRate,
+        setUsdExchangeRate,
+        pricingPercentageAdjustment,
+        setPricingPercentageAdjustment,
       }}
     >
       {children}

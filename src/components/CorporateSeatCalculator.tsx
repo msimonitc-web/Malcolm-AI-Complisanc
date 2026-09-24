@@ -9,6 +9,7 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { calculateOrderTotalSCR, CoursePackageType } from '../utils/pricing';
+import { useAcademy } from '../context/AcademyContext';
 
 interface CorporateSeatCalculatorProps {
   onApplySelection?: (seats: number, pkg: 'both' | 'level1' | 'level2') => void;
@@ -17,16 +18,17 @@ interface CorporateSeatCalculatorProps {
 export const CorporateSeatCalculator: React.FC<CorporateSeatCalculatorProps> = ({
   onApplySelection,
 }) => {
+  const { usdExchangeRate, pricingPercentageAdjustment } = useAcademy();
   const [seats, setSeats] = useState<number>(5);
   const [selectedPkg, setSelectedPkg] = useState<'both' | 'level1' | 'level2'>('both');
 
   const mappedPkg: CoursePackageType = selectedPkg === 'both' ? 'pack' : selectedPkg;
-  const pricing = calculateOrderTotalSCR(seats, seats > 1, mappedPkg);
-  const baseSingleRate = calculateOrderTotalSCR(1, false, mappedPkg).ratePerSeat;
+  const pricing = calculateOrderTotalSCR(seats, seats > 1, mappedPkg, pricingPercentageAdjustment);
+  const baseSingleRate = calculateOrderTotalSCR(1, false, mappedPkg, pricingPercentageAdjustment).ratePerSeat;
   const standardTotal = baseSingleRate * seats;
   const savings = Math.max(0, standardTotal - pricing.totalSCR);
   const savingsPercent = Math.round((savings / standardTotal) * 100);
-  const totalUSD = Math.round(pricing.totalSCR / 14.5);
+  const totalUSD = Math.round(pricing.totalSCR / usdExchangeRate);
 
   const handleApply = () => {
     if (onApplySelection) {
@@ -130,13 +132,21 @@ export const CorporateSeatCalculator: React.FC<CorporateSeatCalculatorProps> = (
 
           {/* Step B: Seat Counter Stepper & Slider */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
                 2. Select Staff Seat Count: <span className="text-amber-400 text-sm font-black">{seats} Staff Seat{seats > 1 ? 's' : ''}</span>
               </label>
-              <span className="text-xs text-amber-300 font-bold bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-                Active Tier: {pricing.bandLabel}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-300 font-medium">Exact Count:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={seats}
+                  onChange={(e) => setSeats(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-16 px-2 py-1 bg-black/40 border border-amber-400/40 rounded-lg text-amber-300 font-mono font-bold text-xs text-center focus:outline-hidden focus:border-amber-400"
+                />
+              </div>
             </div>
 
             {/* Slider */}
@@ -146,11 +156,11 @@ export const CorporateSeatCalculator: React.FC<CorporateSeatCalculatorProps> = (
                   type="range"
                   min="1"
                   max="50"
-                  value={seats}
+                  value={Math.min(50, seats)}
                   onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
                   className="w-full accent-amber-400 h-2.5 bg-white/20 rounded-lg cursor-pointer appearance-none relative z-10"
                   style={{
-                    background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${((seats - 1) / 49) * 100}%, rgba(255, 255, 255, 0.2) ${((seats - 1) / 49) * 100}%, rgba(255, 255, 255, 0.2) 100%)`
+                    background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${((Math.min(50, seats) - 1) / 49) * 100}%, rgba(255, 255, 255, 0.2) ${((Math.min(50, seats) - 1) / 49) * 100}%, rgba(255, 255, 255, 0.2) 100%)`
                   }}
                 />
               </div>
@@ -166,7 +176,7 @@ export const CorporateSeatCalculator: React.FC<CorporateSeatCalculatorProps> = (
             {/* Quick Presets */}
             <div className="flex flex-wrap items-center gap-2 mt-3">
               <span className="text-xs text-slate-400 font-semibold mr-1">Quick Presets:</span>
-              {[1, 3, 5, 10, 15, 20, 30].map((preset) => (
+              {[1, 5, 10, 20, 30, 40, 50].map((preset) => (
                 <button
                   key={preset}
                   type="button"

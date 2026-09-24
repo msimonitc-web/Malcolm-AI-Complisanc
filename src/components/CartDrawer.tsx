@@ -70,17 +70,28 @@ export const CartDrawer: React.FC = () => {
         return Boolean(userEmail && o.contactEmail?.trim().toLowerCase() === userEmail);
       });
 
-  // Checkout form fields
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
+  // Checkout form fields - pre-fill from currentUser if available
+  const [contactName, setContactName] = useState(() => currentUser?.name || '');
+  const [contactEmail, setContactEmail] = useState(() => currentUser?.email || '');
   const [contactPhone, setContactPhone] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  const [companyName, setCompanyName] = useState(() => currentUser?.companyName && currentUser.companyName !== 'Individual Learner' ? currentUser.companyName : '');
   const [companyAddress, setCompanyAddress] = useState('');
   const [industrySector, setIndustrySector] = useState('Corporate Service Provider (CSP / Trust)');
   const [notes, setNotes] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync with currentUser when cart opens
+  React.useEffect(() => {
+    if (isCartOpen && currentUser) {
+      if (!contactName && currentUser.name) setContactName(currentUser.name);
+      if (!contactEmail && currentUser.email) setContactEmail(currentUser.email);
+      if (!companyName && currentUser.companyName && currentUser.companyName !== 'Individual Learner') {
+        setCompanyName(currentUser.companyName);
+      }
+    }
+  }, [isCartOpen, currentUser]);
 
   if (!isCartOpen) return null;
 

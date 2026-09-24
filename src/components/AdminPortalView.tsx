@@ -31,6 +31,8 @@ import {
   Activity,
   Trash2,
   Bug,
+  Database,
+  TrendingUp,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAcademy } from '../context/AcademyContext';
@@ -40,6 +42,7 @@ import { AdminEmailNotificationModal } from './AdminEmailNotificationModal';
 import { ClientReceiptNotificationModal } from './ClientReceiptNotificationModal';
 import { MultiSeatTokenModal } from './MultiSeatTokenModal';
 import { AdminAuditTrailView } from './AdminAuditTrailView';
+import { AdminDatabaseBackupView } from './AdminDatabaseBackupView';
 import { E2ETestSuiteModal } from './E2ETestSuiteModal';
 import { AdminBugsErrorsConsole } from './AdminBugsErrorsConsole';
 import { AdminUserPortalOverview } from './AdminUserPortalOverview';
@@ -87,6 +90,10 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({ onViewProforma
     clearDemoOrders,
     isE2ETestModalOpen,
     setIsE2ETestModalOpen,
+    usdExchangeRate,
+    setUsdExchangeRate,
+    pricingPercentageAdjustment,
+    setPricingPercentageAdjustment,
   } = useAcademy();
 
   const { csrfToken, submitProtectedForm } = useCsrf();
@@ -99,12 +106,18 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({ onViewProforma
     | 'audit_trail'
     | 'user_portal_overview'
     | 'bugs_errors'
+    | 'database_backup'
+    | 'fx_settings'
   >('orders');
   const [isPasswordChangeModalOpen, setIsPasswordChangeModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending_payment' | 'activated'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderForActivation, setSelectedOrderForActivation] = useState<EnrollmentOrder | null>(null);
   const [bankReceiptNote, setBankReceiptNote] = useState('');
+  const [newExchangeRateInput, setNewExchangeRateInput] = useState(usdExchangeRate.toString());
+  const [fxUpdateSuccess, setFxUpdateSuccess] = useState<string | null>(null);
+  const [newPercentInput, setNewPercentInput] = useState(pricingPercentageAdjustment.toString());
+  const [percentUpdateSuccess, setPercentUpdateSuccess] = useState<string | null>(null);
   const [isSubmittingActivation, setIsSubmittingActivation] = useState(false);
   const [activationSuccessMsg, setActivationSuccessMsg] = useState<string | null>(null);
   const [selectedNotificationForModal, setSelectedNotificationForModal] = useState<AdminEmailNotification | null>(null);
@@ -485,6 +498,35 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({ onViewProforma
             >
               {systemErrorService.getAllIncidents().length}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveAdminTab('database_backup')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeAdminTab === 'database_backup'
+                ? 'bg-[#071433] text-amber-300 shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+            title="Database Backup & Disaster Recovery (Section 34)"
+          >
+            <Database className="w-4 h-4 text-amber-400" />
+            <span>Database Backup &amp; Recovery</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveAdminTab('fx_settings');
+              setNewExchangeRateInput(usdExchangeRate.toString());
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeAdminTab === 'fx_settings'
+                ? 'bg-[#071433] text-amber-300 shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+            title="Manage USD/SCR Exchange Rate & Volatility Peg"
+          >
+            <DollarSign className="w-4 h-4 text-emerald-500" />
+            <span>FX Rate: {usdExchangeRate.toFixed(2)} SCR</span>
           </button>
 
           <button
@@ -1705,6 +1747,213 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({ onViewProforma
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Database Backup & Disaster Recovery Tab */}
+      {activeAdminTab === 'database_backup' && (
+        <AdminDatabaseBackupView />
+      )}
+
+      {/* FX Exchange Rate & Volatility Management Tab */}
+      {activeAdminTab === 'fx_settings' && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6 max-w-2xl mx-auto">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-200">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">FX Exchange Rate &amp; Volatility Management</h3>
+              <p className="text-xs text-slate-500">Configure the pegged USD conversion rate for international wire invoicing and calculators.</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-2">
+            <p className="font-bold flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-amber-700" />
+              Statutory FX Peg Policy (Republic of Seychelles)
+            </p>
+            <p>
+              Because course fees are denominated in Seychelles Rupees (SCR), international corporate and individual invoices settled in USD are converted using this pegged rate. Adjust this rate immediately during periods of high currency volatility or commercial bank selling rate shifts to prevent currency slippage.
+            </p>
+          </div>
+
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                Current Pegged Rate (SCR per 1.00 USD)
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$1 USD =</span>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="1"
+                    max="100"
+                    value={newExchangeRateInput}
+                    onChange={(e) => setNewExchangeRateInput(e.target.value)}
+                    className="w-full pl-24 pr-16 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 text-sm focus:outline-hidden focus:border-emerald-600 focus:bg-white"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-bold">SCR</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const parsed = parseFloat(newExchangeRateInput);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      setUsdExchangeRate(parsed);
+                      setFxUpdateSuccess(`Successfully updated USD peg to SCR ${parsed.toFixed(2)} / $1 USD.`);
+                      setTimeout(() => setFxUpdateSuccess(null), 4000);
+                    }
+                  }}
+                  className="px-6 py-2.5 bg-[#071433] hover:bg-[#0b1c45] text-amber-300 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 shrink-0"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Update Peg</span>
+                </button>
+              </div>
+            </div>
+
+            {fxUpdateSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>{fxUpdateSuccess}</span>
+              </div>
+            )}
+
+            {/* SCR Course Fee Percentage Adjustment Section */}
+            <div className="pt-6 border-t border-slate-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span>SCR Base Course Fee Percentage Adjustment</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Scale all individual and corporate volume tier prices uniformly by a percentage (e.g., +5% or -5%) to prevent typos and manual entry errors.
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-mono font-bold">
+                  Current: {pricingPercentageAdjustment > 0 ? `+${pricingPercentageAdjustment}%` : `${pricingPercentageAdjustment}%`}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-5 gap-2">
+                {[0, 5, 10, 15, 20].map((pct) => (
+                  <button
+                    key={pct}
+                    onClick={() => {
+                      setPricingPercentageAdjustment(pct);
+                      setNewPercentInput(pct.toString());
+                      setPercentUpdateSuccess(`Successfully set base fee adjustment to +${pct}%.`);
+                      setTimeout(() => setPercentUpdateSuccess(null), 4000);
+                    }}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                      pricingPercentageAdjustment === pct
+                        ? 'bg-[#071433] text-amber-300 border-[#071433] shadow-xs'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    {pct === 0 ? 'Standard (0%)' : `+${pct}%`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">Adjust:</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="-50"
+                    max="100"
+                    value={newPercentInput}
+                    onChange={(e) => setNewPercentInput(e.target.value)}
+                    className="w-full pl-20 pr-16 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 text-sm focus:outline-hidden focus:border-emerald-600 focus:bg-white"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-bold">%</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const parsed = parseFloat(newPercentInput);
+                    if (!isNaN(parsed)) {
+                      setPricingPercentageAdjustment(parsed);
+                      setPercentUpdateSuccess(`Successfully updated base fee adjustment to ${parsed > 0 ? `+${parsed}%` : `${parsed}%`}.`);
+                      setTimeout(() => setPercentUpdateSuccess(null), 4000);
+                    }
+                  }}
+                  className="px-6 py-2.5 bg-[#071433] hover:bg-[#0b1c45] text-amber-300 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 shrink-0"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Apply % Scaling</span>
+                </button>
+              </div>
+
+              {percentUpdateSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{percentUpdateSuccess}</span>
+                </div>
+              )}
+
+              {/* Live Rate Preview Table */}
+              {(() => {
+                const parsed = parseFloat(newPercentInput);
+                const activePct = isNaN(parsed) ? pricingPercentageAdjustment : parsed;
+                const factor = 1 + activePct / 100;
+                return (
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 font-mono text-xs">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        Live Rate Preview ({activePct > 0 ? `+${activePct}%` : `${activePct}%`} Adjustment)
+                      </span>
+                      <span className="text-[10px] text-slate-500">Updates as you type</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-slate-700">
+                      <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+                        <span>Indiv. Level 1 (Base SCR 1,250):</span>
+                        <strong className="text-emerald-700">SCR {Math.round(1250 * factor).toLocaleString()}</strong>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+                        <span>Corp. Tier 1–5 Pack (Base 2,250):</span>
+                        <strong className="text-emerald-700">SCR {Math.round(2250 * factor).toLocaleString()}/seat</strong>
+                      </div>
+
+                      <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+                        <span>Indiv. Level 2 (Base SCR 1,500):</span>
+                        <strong className="text-emerald-700">SCR {Math.round(1500 * factor).toLocaleString()}</strong>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+                        <span>Corp. Tier 6–10 Pack (Base 2,050):</span>
+                        <strong className="text-emerald-700">SCR {Math.round(2050 * factor).toLocaleString()}/seat</strong>
+                      </div>
+
+                      <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+                        <span>Indiv. Complete Pack (Base 2,500):</span>
+                        <strong className="text-emerald-700">SCR {Math.round(2500 * factor).toLocaleString()}</strong>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+                        <span>Corp. Tier 11–20 Pack (Base 1,850):</span>
+                        <strong className="text-emerald-700">SCR {Math.round(1850 * factor).toLocaleString()}/seat</strong>
+                      </div>
+
+                      <div className="md:col-span-2 flex justify-between py-1.5 font-bold bg-emerald-50/80 px-3 rounded-lg border border-emerald-200">
+                        <span className="text-emerald-900">Corp. Tier 21+ Complete Pack (Base 1,650):</span>
+                        <span className="text-emerald-800">SCR {Math.round(1650 * factor).toLocaleString()} / seat</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-1">
+              <p>• Automatically updates all active cart totals, corporate seat calculators, and proforma invoices instantly.</p>
+              <p>• Every rate adjustment is logged immutably to the Centralized System Audit Trail under security events.</p>
             </div>
           </div>
         </div>

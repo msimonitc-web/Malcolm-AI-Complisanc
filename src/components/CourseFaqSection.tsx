@@ -266,17 +266,6 @@ export const CourseFaqSection: React.FC = () => {
                   className="w-full flex items-start justify-between gap-3 text-left group transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <span
-                      className={`mt-0.5 w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
-                        faq.category === 'exam'
-                          ? 'bg-amber-100 text-amber-800 group-hover:bg-amber-200'
-                          : faq.category === 'certificate'
-                          ? 'bg-blue-100 text-blue-800 group-hover:bg-blue-200'
-                          : 'bg-emerald-100 text-emerald-800 group-hover:bg-emerald-200'
-                      }`}
-                    >
-                      {faq.category === 'exam' ? '80%' : faq.category === 'certificate' ? 'CPD' : 'FSA'}
-                    </span>
                     <span className="text-sm font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
                       {faq.question}
                     </span>
@@ -288,7 +277,7 @@ export const CourseFaqSection: React.FC = () => {
                 </button>
 
                 {isOpen && (
-                  <div className="mt-3 pl-9 pr-2 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="mt-3 pl-0 pr-2 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
                     <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                       {faq.answer}
                     </p>

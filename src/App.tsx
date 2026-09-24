@@ -28,6 +28,7 @@ import { RegistrationWizardModal } from './components/RegistrationWizardModal';
 import { MarketingStudioModal } from './components/MarketingStudioModal';
 import { E2ETestSuiteModal } from './components/E2ETestSuiteModal';
 import { PublicCertificateVerifierModal } from './components/PublicCertificateVerifierModal';
+import { FirstLoginPasswordChangeModal } from './components/FirstLoginPasswordChangeModal';
 import { AdminEmailNotification } from './types';
 import { CompliseyLogo } from './components/CompliseyLogo';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -58,6 +59,8 @@ const AcademyAppContent: React.FC = () => {
     setIsE2ETestModalOpen,
     isCertificateVerifierOpen,
     setIsCertificateVerifierOpen,
+    pendingFirstLoginAdminEmail,
+    setPendingFirstLoginAdminEmail,
     openCoursePlayer,
     setIsCartOpen,
   } = useAcademy();
@@ -483,6 +486,13 @@ const AcademyAppContent: React.FC = () => {
         isOpen={isCertificateVerifierOpen}
         onClose={() => setIsCertificateVerifierOpen(false)}
         initialCode={initialVerifyCode}
+      />
+
+      {/* Mandatory First-Login Password Change Modal for Malcolm & Eric */}
+      <FirstLoginPasswordChangeModal
+        isOpen={!!pendingFirstLoginAdminEmail}
+        adminEmail={pendingFirstLoginAdminEmail || ''}
+        onSuccess={() => setPendingFirstLoginAdminEmail(null)}
       />
     </div>
   );

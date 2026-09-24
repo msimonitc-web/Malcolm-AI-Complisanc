@@ -53,6 +53,18 @@ export const INITIAL_ACTIVATION_TOKENS: CourseActivationToken[] = [
     issuedAt: '2026-09-17T08:00:00.000Z',
     status: 'active',
   },
+  {
+    token: 'PARTNER-LAUNCH-2026',
+    courseIds: ['c-1', 'c-2', 'c-3', 'c-4', 'c-5', 'c-6'],
+    courseTitle: 'Level 1 & Level 2 Complete Partner Launch Access',
+    issuedBy: 'Malcolm Simon',
+    issuedToName: 'Complisey Founding Partner',
+    issuedToEmail: 'partner@complisey.com',
+    orderId: 'ord-partner-launch',
+    proformaNumber: 'PRO-PARTNER-VIP',
+    issuedAt: '2026-09-20T00:00:00.000Z',
+    status: 'active',
+  },
 ];
 
 class ActivationTokenService {
@@ -525,6 +537,14 @@ class ActivationTokenService {
     lines.push(`3. Seat will be permanently locked to your verified profile for official certificate issuance.`);
 
     return lines.join('\n');
+  }
+
+  public clearAllTokens(): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    } catch (e) {
+      console.warn('Failed to clear activation tokens:', e);
+    }
   }
 }
 

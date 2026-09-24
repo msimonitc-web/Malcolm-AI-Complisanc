@@ -16,6 +16,8 @@ import {
   HelpCircle,
   User,
   AlertCircle,
+  ShoppingCart,
+  CheckCircle2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAcademy } from '../context/AcademyContext';
@@ -29,13 +31,14 @@ export const PaymentModal: React.FC = () => {
   const {
     selectedCourseForCheckout,
     setSelectedCourseForCheckout,
-    createProformaOrder,
-    setSelectedProformaForView,
     formatPrice,
     currency,
     setActiveLegalModal,
     setActiveTab,
     currentUser,
+    addToCart,
+    setIsCartOpen,
+    setCartEnrollmentType,
   } = useAcademy();
 
   const { csrfToken, submitProtectedForm } = useCsrf();
@@ -58,6 +61,9 @@ export const PaymentModal: React.FC = () => {
   const [contactPhone, setContactPhone] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [selectionError, setSelectionError] = useState<string | null>(null);
+
+  // Modal step: 'form' for entering registration details, 'review' for summarizing selections before cart
+  const [modalStep, setModalStep] = useState<'form' | 'review'>('form');
 
   // Promo code handling
   const [promoInput, setPromoInput] = useState('');
@@ -103,7 +109,7 @@ export const PaymentModal: React.FC = () => {
     }
   };
 
-  const handleGenerateProforma = async (e: React.FormEvent) => {
+  const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
     setSelectionError(null);
 
@@ -111,56 +117,48 @@ export const PaymentModal: React.FC = () => {
       setSelectionError('Please choose whether you are enrolling as an Individual Learner or for a Corporate Entity.');
       return;
     }
-
-    setIsSubmitting(true);
-
-    const orderPayload = {
-      courseId: course.id,
-      packageType: selectedPackage,
-      seatCount: effectiveSeatCount,
-      isCorporate,
-      companyName: isCorporate ? (companyName.trim() || 'Corporate Reporting Entity') : (contactName.trim() || 'Individual Learner'),
-      companyAddress: companyAddress.trim(),
-      contactName: contactName.trim() || 'Compliance Officer',
-      contactEmail: contactEmail.trim() || 'compliance@reporting-entity.sc',
-      contactPhone: contactPhone.trim(),
-      notes: orderNotes.trim(),
-      _csrf: csrfToken,
-    };
-
-    // Submit to protected backend endpoint to verify CSRF token
-    try {
-      await submitProtectedForm('/api/forms/enrollment-order', orderPayload);
-    } catch (err) {
-      console.warn('Backend CSRF verification handled locally or network offline:', err);
+    if (!contactName.trim()) {
+      setSelectionError('Please enter the contact person / learner name.');
+      return;
+    }
+    if (!contactEmail.trim() || !contactEmail.includes('@')) {
+      setSelectionError('Please enter a valid email address.');
+      return;
+    }
+    if (isCorporate && !companyName.trim()) {
+      setSelectionError('Please enter the Corporate Reporting Entity name.');
+      return;
     }
 
-    setTimeout(() => {
-      const newOrder = createProformaOrder({
+    setModalStep('review');
+  };
+
+  const handleConfirmAndAddToCart = () => {
+    setIsSubmitting(true);
+    try {
+      addToCart({
         courseId: course.id,
+        courseTitle: course.title,
         packageType: selectedPackage,
         seatCount: effectiveSeatCount,
-        isCorporate,
-        companyName: isCorporate ? (companyName.trim() || 'Corporate Reporting Entity') : (contactName.trim() || 'Individual Learner'),
-        companyAddress: companyAddress.trim(),
-        contactName: contactName.trim() || 'Compliance Officer',
-        contactEmail: contactEmail.trim() || 'compliance@reporting-entity.sc',
-        contactPhone: contactPhone.trim(),
-        notes: orderNotes.trim(),
+        description: course.shortDescription,
+        cpdHours: course.cpdHours,
+        modulesCount: course.modules.length,
       });
-
-      setIsSubmitting(false);
+      setCartEnrollmentType(isCorporate ? 'corporate' : 'individual');
       setSelectedCourseForCheckout(null);
-      setSelectedProformaForView(newOrder);
+      setIsCartOpen(true);
 
       try {
         confetti({
-          particleCount: 60,
+          particleCount: 50,
           spread: 60,
           origin: { y: 0.6 },
         });
       } catch (e) {}
-    }, 450);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -259,8 +257,102 @@ export const PaymentModal: React.FC = () => {
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
+          ) : modalStep === 'review' ? (
+            <div className="space-y-5 py-4">
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-emerald-950">Registration Summary &amp; Review</h4>
+                  <p className="text-xs text-emerald-800">
+                    Please review your registration selections below. Clicking &ldquo;Confirm &amp; Add to Cart&rdquo; will add this registration to your cart as the final step before checkout.
+                  </p>
+                </div>
+              </div>
+
+              {selectionError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600" />
+                  <span>{selectionError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Curriculum &amp; Seats</span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Course / Program:</span>
+                    <strong className="text-slate-900">{course.title}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Package Track:</span>
+                    <strong className="text-emerald-700 uppercase">{selectedPackage}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Enrollment Type:</span>
+                    <strong className="text-slate-900 capitalize">{enrollmentType}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Seat Count:</span>
+                    <strong className="text-slate-900">{effectiveSeatCount} Seat(s)</strong>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Contact &amp; Entity Details</span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Contact / Learner:</span>
+                    <strong className="text-slate-900">{contactName}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Email:</span>
+                    <strong className="text-slate-900">{contactEmail}</strong>
+                  </div>
+                  {isCorporate && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Reporting Entity:</span>
+                        <strong className="text-slate-900">{companyName}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Address:</span>
+                        <strong className="text-slate-900">{companyAddress || 'Victoria, Mahé, Seychelles'}</strong>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-slate-200">
+                    <span className="font-bold text-slate-800">Total Price:</span>
+                    <strong className="text-[#071433] text-sm font-black">{formatPrice(finalPrice)} SCR</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setModalStep('form')}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Back to Edit Registration
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleConfirmAndAddToCart}
+                  className="px-6 py-2.5 rounded-xl bg-[#071433] hover:bg-[#0f2866] text-amber-300 text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {isSubmitting ? (
+                    <div className="w-4 h-4 border-2 border-amber-300/30 border-t-amber-300 rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>Confirm &amp; Add to Cart ({formatPrice(finalPrice)} SCR)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           ) : (
-            <form onSubmit={handleGenerateProforma}>
+            <form onSubmit={handleProceedToReview}>
               <CsrfInput formName="enrollment" />
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                 {/* Left Column: Form & Banking Info */}
@@ -775,8 +867,8 @@ export const PaymentModal: React.FC = () => {
                         <span>Select Individual or Corporate Above to Proceed</span>
                       ) : (
                         <>
-                          <FileText className="w-4 h-4" />
-                          <span>Generate Proforma Invoice ({formatPrice(finalPrice)})</span>
+                          <ShoppingCart className="w-4 h-4" />
+                          <span>Review Registration &amp; Proceed to Cart ({formatPrice(finalPrice)} SCR)</span>
                         </>
                       )}
                     </button>

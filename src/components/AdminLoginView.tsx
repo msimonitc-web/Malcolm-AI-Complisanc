@@ -23,8 +23,8 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = () => {
   const { loginWithCredentials, getAdminPassword } = useAcademy();
   const { csrfToken, submitProtectedForm } = useCsrf();
 
-  const [email, setEmail] = useState('malcolm@complisanc.com');
-  const [password, setPassword] = useState(() => getAdminPassword('malcolm@complisanc.com'));
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,59 +101,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = () => {
             Direct portal for verifying bank wire proformas, issuing course activation tokens, and generating statutory training audit files under Section 34 of the Seychelles AML/CFT Act 2020.
           </p>
           <div className="pt-2 border-t border-[#1a3875] text-[11px] text-amber-200/90 italic">
-            Strictly isolated secure credentials for audit accountability under Section 34. Click your name below to securely load credentials.
-          </div>
-        </div>
-
-        {/* Quick Demo Pre-select for Malcolm Simon and Eric D'Souza */}
-        <div className="space-y-1.5">
-          <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
-            Select Administrator:
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('malcolm@complisanc.com');
-                setPassword(getAdminPassword('malcolm@complisanc.com'));
-                setError(null);
-              }}
-              className={`p-2.5 rounded-xl border text-left transition-all ${
-                email.includes('malcolm')
-                  ? 'border-amber-400 bg-amber-400/15 text-amber-300'
-                  : 'border-[#19366f] bg-[#0c1f4a] hover:bg-[#112961] text-slate-300'
-              }`}
-            >
-              <div className="text-xs font-bold flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>Malcolm Simon</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-                Administration &amp; Support
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('eric@complisanc.com');
-                setPassword(getAdminPassword('eric@complisanc.com'));
-                setError(null);
-              }}
-              className={`p-2.5 rounded-xl border text-left transition-all ${
-                email.includes('eric')
-                  ? 'border-amber-400 bg-amber-400/15 text-amber-300'
-                  : 'border-[#19366f] bg-[#0c1f4a] hover:bg-[#112961] text-slate-300'
-              }`}
-            >
-              <div className="text-xs font-bold flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>Eric D'Souza</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-                Training Inquiries &amp; Director
-              </div>
-            </button>
+            Enter your secure administrator credentials to access the Back Office.
           </div>
         </div>
 

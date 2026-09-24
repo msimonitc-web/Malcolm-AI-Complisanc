@@ -25,6 +25,7 @@ import {
   Video,
   Film,
   CreditCard,
+  X,
 } from 'lucide-react';
 import { useAcademy } from '../context/AcademyContext';
 import { Course, EnrollmentOrder } from '../types';
@@ -58,6 +59,8 @@ export const CourseDashboard: React.FC = () => {
     cart,
     setIsRegistrationWizardOpen,
     setIsMarketingStudioOpen,
+    usdExchangeRate,
+    pricingPercentageAdjustment,
   } = useAcademy();
 
   const { csrfToken, submitProtectedForm } = useCsrf();
@@ -76,6 +79,7 @@ export const CourseDashboard: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<EnrollmentOrder | null>(null);
+  const [showRegReviewModal, setShowRegReviewModal] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
 
   // Group Courses into Level 1 and Level 2
@@ -91,11 +95,11 @@ export const CourseDashboard: React.FC = () => {
     const effectiveSeats = isCorporate ? Math.max(1, seatCount) : 1;
     const activePkg = pkgOverride || selectedPackage || 'both';
     const mappedPkg: CoursePackageType = activePkg === 'both' ? 'pack' : activePkg;
-    const pricingCalc = calculateOrderTotalSCR(effectiveSeats, isCorporate, mappedPkg);
+    const pricingCalc = calculateOrderTotalSCR(effectiveSeats, isCorporate, mappedPkg, pricingPercentageAdjustment);
 
     const ratePerSeat = pricingCalc.ratePerSeat;
     const totalSCR = pricingCalc.totalSCR;
-    const totalUSD = Math.round(totalSCR / 14.5);
+    const totalUSD = Math.round(totalSCR / usdExchangeRate);
 
     return {
       ratePerSeat,
@@ -147,8 +151,11 @@ export const CourseDashboard: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    setShowRegReviewModal(true);
+  };
 
+  const handleConfirmRegistrationAndAddToCart = async () => {
+    setIsSubmitting(true);
     try {
       const packageTitle =
         selectedPackage === 'both'
@@ -157,7 +164,7 @@ export const CourseDashboard: React.FC = () => {
           ? 'CompliSey Academy: Level 1 Statutory Foundations (Modules 1, 2 & 3)'
           : 'CompliSey Academy: Level 2 Advanced Operational Compliance (Modules 4, 5 & 6)';
 
-      const notes = `Package: ${selectedPackage.toUpperCase()} | Sector: ${regType === 'corporate' ? industrySector : 'Individual'} | Registration Type: ${regType.toUpperCase()}`;
+      const notes = `Package: ${selectedPackage?.toUpperCase()} | Sector: ${regType === 'corporate' ? industrySector : 'Individual'} | Registration Type: ${regType?.toUpperCase()}`;
 
       const newOrder = createProformaOrder({
         courseId: selectedPackage === 'both' ? 'full-catalogue-bundle' : selectedPackage === 'level1' ? 'level1-bundle' : 'level2-bundle',
@@ -169,10 +176,16 @@ export const CourseDashboard: React.FC = () => {
         contactPhone: phone.trim() || '+248 2500000',
         notes,
         isCorporate: regType === 'corporate',
-        packageType: selectedPackage === 'both' ? 'pack' : selectedPackage,
+        packageType: selectedPackage === 'both' ? 'pack' : (selectedPackage || 'pack'),
       });
 
-      // Submit CSRF protected telemetry
+      addToCart({
+        courseId: selectedPackage === 'both' ? 'full-catalogue-bundle' : selectedPackage === 'level1' ? 'level1-bundle' : 'level2-bundle',
+        courseTitle: packageTitle,
+        packageType: selectedPackage === 'both' ? 'pack' : (selectedPackage || 'pack'),
+        seatCount: pricing.effectiveSeats,
+      });
+
       try {
         await submitProtectedForm('/api/orders/register', {
           orderId: newOrder.id,
@@ -186,8 +199,9 @@ export const CourseDashboard: React.FC = () => {
 
       setCompletedOrder(newOrder);
       setIsSubmitting(false);
+      setShowRegReviewModal(false);
+      setIsCartOpen(true);
 
-      // Scroll to confirmation
       setTimeout(() => {
         const el = document.getElementById('order-confirmation-card');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -195,6 +209,7 @@ export const CourseDashboard: React.FC = () => {
     } catch (err: any) {
       setIsSubmitting(false);
       setFormError(err?.message || 'An error occurred during registration. Please try again.');
+      setShowRegReviewModal(false);
     }
   };
 
@@ -1349,8 +1364,8 @@ export const CourseDashboard: React.FC = () => {
                       <span>Recording Registration...</span>
                     ) : (
                       <>
-                        <span>Submit Registration &amp; Generate Bank Payment Details</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <ShoppingCart className="w-4 h-4 text-amber-300" />
+                        <span>Review Registration &amp; Proceed to Cart ({pricing.totalSCR ? `SCR ${pricing.totalSCR.toLocaleString()}` : ''})</span>
                       </>
                     )}
                   </button>
@@ -1561,6 +1576,114 @@ export const CourseDashboard: React.FC = () => {
             </div>
           </div>
         </section>
+      )}
+
+      {/* Registration Review Modal */}
+      {showRegReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#0a1631] rounded-3xl border border-slate-200 dark:border-[#1c3978] shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-blue-600 to-emerald-500" />
+            
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400 text-[#071433] flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                    Review Your Registration
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Please verify your enrollment selections before proceeding to the cart.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRegReviewModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Classification &amp; Package</div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Type:</span>
+                  <strong className="text-slate-900 dark:text-white capitalize">{regType}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Curriculum Pack:</span>
+                  <strong className="text-amber-600 dark:text-amber-400 uppercase">{selectedPackage}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Seat Count:</span>
+                  <strong className="text-slate-900 dark:text-white">{pricing.effectiveSeats} Seat(s)</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Pricing Tier:</span>
+                  <strong className="text-emerald-600 dark:text-emerald-400">{pricing.bandLabel}</strong>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Applicant / Entity Details</div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Name:</span>
+                  <strong className="text-slate-900 dark:text-white">{fullName}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Email:</span>
+                  <strong className="text-slate-900 dark:text-white">{email}</strong>
+                </div>
+                {regType === 'corporate' && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Entity Name:</span>
+                    <strong className="text-slate-900 dark:text-white">{companyName}</strong>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Total Quotation:</span>
+                  <strong className="text-amber-600 dark:text-amber-400 text-sm font-black">SCR {pricing.totalSCR.toLocaleString()}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
+              <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <strong>Cart is the Final Checkout Step:</strong> Clicking confirm will add this registration to your consolidated cart and open the checkout drawer where you can generate your proforma invoice and bank transfer wire instructions.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowRegReviewModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
+              >
+                Back to Edit
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleConfirmRegistrationAndAddToCart}
+                className="px-6 py-2.5 rounded-xl bg-[#071433] hover:bg-[#0c245c] text-amber-300 dark:bg-amber-400 dark:text-[#071433] text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span>Adding to Cart...</span>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>Confirm &amp; Add to Cart (SCR {pricing.totalSCR.toLocaleString()})</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Regulatory FAQ Section */}
