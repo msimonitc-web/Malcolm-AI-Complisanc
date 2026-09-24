@@ -37,6 +37,18 @@ export const DEMO_ACCOUNTS: Record<string, { account: UserAccount; passwordHash:
     },
     passwordHash: 'Learner2026!',
   },
+  corporate: {
+    account: {
+      id: 'usr-corporate-sarah',
+      email: 's.confait@fiduciary-sey.sc',
+      name: 'Sarah J. Confait',
+      role: 'corporate',
+      title: 'MLRO & Head of Compliance',
+      companyName: 'Victoria Fiduciary Services Ltd',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
+    },
+    passwordHash: 'Corporate2026!',
+  },
 };
 
 export const INITIAL_CORPORATE_MEMBERS: CorporateTeamMember[] = [

@@ -26,6 +26,23 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
+  // Security Headers: HSTS, CSP & Protections
+  app.use((req, res, next) => {
+    // HSTS (HTTP Strict Transport Security)
+    if (process.env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https') {
+      res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+    }
+    // CSP (Content Security Policy)
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://images.unsplash.com https://*.unsplash.com https://firebasestorage.googleapis.com; connect-src 'self' https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.resend.com;"
+    );
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
   // Automatically attach/ensure CSRF cookie on all incoming requests
   app.use(ensureCsrfCookie);
 

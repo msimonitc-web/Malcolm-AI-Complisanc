@@ -23,6 +23,7 @@ import { ActiveTab, UserAccount } from '../types';
 import { CompliseyLogo } from './CompliseyLogo';
 import { useCsrf, CsrfInput } from '../context/CsrfContext';
 import { ThemeToggle } from './ThemeToggle';
+import { PreLaunchSeatReservationModal } from './PreLaunchSeatReservationModal';
 
 interface NavigationProps {
   onOpenRedeemModal?: () => void;
@@ -444,22 +445,37 @@ export const Navigation: React.FC<NavigationProps> = ({
             {/* Quick Demo Pre-fill for User Portal */}
             <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-[#071433]/70 border border-slate-200 dark:border-[#193566]">
               <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Quick-Select Student Portal Account:
+                Quick-Select Portal Account:
               </div>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setLoginEmail('learner@complisey.com');
                     setLoginPassword('Learner2026!');
                   }}
-                  className="p-2 text-left rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 text-xs font-bold text-emerald-900 dark:text-emerald-300 transition-colors"
+                  className="p-2 text-left rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 text-xs font-bold text-emerald-900 dark:text-emerald-300 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-1.5 mb-1">
                     <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span className="font-bold">Standard Student Learner</span>
+                    <span className="font-bold">Student Learner</span>
                   </div>
-                  <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">Standard Course Enrollee</div>
+                  <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">Compliance Officer</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginEmail('s.confait@fiduciary-sey.sc');
+                    setLoginPassword('Corporate2026!');
+                  }}
+                  className="p-2 text-left rounded-lg border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 text-xs font-bold text-amber-900 dark:text-amber-300 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    <span className="font-bold">Corporate MLRO</span>
+                  </div>
+                  <div className="text-[10px] text-amber-700 dark:text-amber-400 font-normal">Bulk Seats & Staff Tracking</div>
                 </button>
               </div>
             </div>
